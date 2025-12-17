@@ -1,0 +1,24 @@
+name: proyecto_tp3
+description: "A new Flutter project."
+publish_to: "none"
+version: 0.1.0
+
+environment:
+  sdk: ^3.9.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^2.5.5
+  go_router: ^16.2.1
+  heroicons: ^0.11.0
+  fl_chart: ^0.69.0
+  material_symbols_icons: ^4.2800.1
+
+dev_dependencies:
+  flutter_lints: ^5.0.0
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
