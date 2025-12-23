@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:heroicons/heroicons.dart';
 import 'dart:math' as math;
+import '../theme/app_colors.dart';
 
 class TermostatoPage extends StatefulWidget {
   const TermostatoPage({super.key});
@@ -14,6 +15,7 @@ class _TermostatoPageState extends State<TermostatoPage>
     with SingleTickerProviderStateMixin {
   // Zona seleccionada
   int _zonaSeleccionada = 0;
+  int _selectedNavIndex = 0;
 
   // Modos del termostato
   int _modoSeleccionado = 2; // 0: Off, 1: Frío, 2: Calor, 3: Auto
@@ -340,18 +342,10 @@ class _TermostatoPageState extends State<TermostatoPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0D1117),
+      backgroundColor: AppColors.backgroundPrimary,
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF0D1117),
-              Color(0xFF161B22),
-              Color(0xFF0D1117),
-            ],
-          ),
+          gradient: AppColors.celestialBlueGradient,
         ),
         child: SafeArea(
           child: Column(
@@ -392,6 +386,110 @@ class _TermostatoPageState extends State<TermostatoPage>
               ),
             ],
           ),
+        ),
+      ),
+      bottomNavigationBar: _buildBottomNavigationBar(),
+    );
+  }
+
+  // Bottom Navigation Bar
+  Widget _buildBottomNavigationBar() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF161B22),
+        border: Border(
+          top: BorderSide(
+            color: const Color(0xFF30363D).withValues(alpha: 0.5),
+            width: 1,
+          ),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 20,
+            offset: const Offset(0, -5),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildNavItem(
+                icon: HeroIcons.home,
+                label: 'Home',
+                index: 0,
+              ),
+              _buildNavItem(
+                icon: HeroIcons.squares2x2,
+                label: 'Panel',
+                index: 1,
+              ),
+              _buildNavItem(
+                icon: HeroIcons.bell,
+                label: 'Alertas',
+                index: 2,
+              ),
+              _buildNavItem(
+                icon: HeroIcons.cog6Tooth,
+                label: 'Ajustes',
+                index: 3,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem({
+    required HeroIcons icon,
+    required String label,
+    required int index,
+  }) {
+    final isSelected = _selectedNavIndex == index;
+    final color = isSelected ? const Color(0xFF58A6FF) : const Color(0xFF8B949E);
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedNavIndex = index;
+        });
+        if (index == 0) {
+          context.go('/');
+        }
+      },
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? const Color(0xFF58A6FF).withValues(alpha: 0.15)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            HeroIcon(
+              icon,
+              style: isSelected ? HeroIconStyle.solid : HeroIconStyle.outline,
+              color: color,
+              size: 24,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                color: color,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -761,7 +859,7 @@ class _TermostatoPageState extends State<TermostatoPage>
 
   Widget _buildModoSelector() {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
       decoration: BoxDecoration(
         color: const Color(0xFF161B22),
         borderRadius: BorderRadius.circular(16),
@@ -889,7 +987,7 @@ class _TermostatoPageState extends State<TermostatoPage>
 
   Widget _buildZonasSelector() {
     return Container(
-      height: 130,
+      height: 120,
       margin: const EdgeInsets.symmetric(horizontal: 20),
       decoration: BoxDecoration(
         color: const Color(0xFF161B22),
@@ -902,7 +1000,7 @@ class _TermostatoPageState extends State<TermostatoPage>
         children: [
           // Header
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
+            padding: const EdgeInsets.fromLTRB(14, 5, 14, 1),
             child: Row(
               children: [
                 Container(
@@ -961,7 +1059,7 @@ class _TermostatoPageState extends State<TermostatoPage>
           Expanded(
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+              padding: const EdgeInsets.fromLTRB(10, 0, 10, 5),
               itemCount: _zonas.length,
               itemBuilder: (context, index) {
                 return _buildZonaChip(index);

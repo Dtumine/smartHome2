@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:heroicons/heroicons.dart';
+import '../theme/app_colors.dart';
 
 class CerradurasPage extends StatefulWidget {
   const CerradurasPage({super.key});
@@ -10,7 +12,7 @@ class CerradurasPage extends StatefulWidget {
 }
 
 class _CerradurasPageState extends State<CerradurasPage>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   // Cerradura seleccionada para ver detalles
   int _cerraduraSeleccionada = 0;
 
@@ -20,9 +22,16 @@ class _CerradurasPageState extends State<CerradurasPage>
   // Navegación inferior
   int _selectedNavIndex = 0;
 
+  // Timer para cambio automático
+  Timer? _autoScrollTimer;
+
   // Animación
   late AnimationController _lockAnimController;
   late Animation<double> _lockAnimation;
+  
+  // Animación de titileo para alertas
+  late AnimationController _alertBlinkController;
+  late Animation<double> _alertBlinkAnimation;
 
   // Datos de las cerraduras
   final List<Cerradura> _cerraduras = [
@@ -225,11 +234,32 @@ class _CerradurasPageState extends State<CerradurasPage>
     _lockAnimation = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _lockAnimController, curve: Curves.easeInOut),
     );
+
+    // Animación de titileo para alertas
+    _alertBlinkController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _alertBlinkAnimation = Tween<double>(begin: 0.3, end: 1.0).animate(
+      CurvedAnimation(parent: _alertBlinkController, curve: Curves.easeInOut),
+    );
+
+    // Iniciar el cambio automático cada 3 segundos
+    _autoScrollTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      if (mounted) {
+        setState(() {
+          _cerraduraSeleccionada = (_cerraduraSeleccionada + 1) % _cerraduras.length;
+        });
+      }
+    });
   }
 
   @override
   void dispose() {
+    _autoScrollTimer?.cancel();
     _lockAnimController.dispose();
+    _alertBlinkController.dispose();
     super.dispose();
   }
 
@@ -265,18 +295,10 @@ class _CerradurasPageState extends State<CerradurasPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0D1117),
+      backgroundColor: AppColors.backgroundPrimary,
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF0D1117),
-              Color(0xFF161B22),
-              Color(0xFF0D1117),
-            ],
-          ),
+          gradient: AppColors.celestialBlueGradient,
         ),
         child: SafeArea(
           child: Column(
@@ -284,28 +306,39 @@ class _CerradurasPageState extends State<CerradurasPage>
               // AppBar personalizado
               _buildAppBar(),
 
-              const SizedBox(height: 8),
+              const SizedBox(height: 20),
 
-              // Estadísticas rápidas (más compactas)
+              // KPI Card principal
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: _buildEstadisticas(),
+                child: _buildKpiCard(),
               ),
 
-              const SizedBox(height: 10),
+              const SizedBox(height: 16),
 
-              // Tabs
+              // Card de alertas
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: _buildTabs(),
+                child: _buildAlertasCard(),
               ),
 
-              const SizedBox(height: 10),
+              const SizedBox(height: 14),
 
-              // Contenido según tab
-              Expanded(
-                child: _buildContenidoTab(),
+              // Resumen General
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: _buildResumenGeneral(),
               ),
+
+              const SizedBox(height: 14),
+
+              // Scroll horizontal de cerraduras
+              SizedBox(
+                height: 100,
+                child: _buildCerradurasHorizontal(),
+              ),
+
+              const SizedBox(height: 16),
             ],
           ),
         ),
@@ -324,16 +357,23 @@ class _CerradurasPageState extends State<CerradurasPage>
             child: Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: const Color(0xFF21262D),
+                color: AppColors.cardBackground,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: const Color(0xFF30363D),
+                  color: AppColors.cardBorder,
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.cardShadow,
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-              child: const HeroIcon(
+              child: HeroIcon(
                 HeroIcons.arrowLeft,
                 style: HeroIconStyle.outline,
-                color: Colors.white,
+                color: AppColors.textPrimary,
                 size: 20,
               ),
             ),
@@ -343,19 +383,19 @@ class _CerradurasPageState extends State<CerradurasPage>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Cerraduras',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: AppColors.textPrimary,
                   ),
                 ),
                 Text(
                   '$_cerradurasCerradas cerradas · $_cerradurasAbiertas abiertas',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
-                    color: Color(0xFF8B949E),
+                    color: AppColors.textSecondary,
                   ),
                 ),
               ],
@@ -368,17 +408,26 @@ class _CerradurasPageState extends State<CerradurasPage>
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
                 gradient: _cerradurasAbiertas > 0
-                    ? const LinearGradient(
-                        colors: [Color(0xFFFF6B6B), Color(0xFFEE5A24)],
+                    ? LinearGradient(
+                        colors: [AppColors.error, AppColors.errorDark],
                       )
                     : null,
-                color: _cerradurasAbiertas > 0 ? null : const Color(0xFF21262D),
+                color: _cerradurasAbiertas > 0 ? null : AppColors.cardBackground,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
                   color: _cerradurasAbiertas > 0
-                      ? const Color(0xFFFF6B6B).withValues(alpha: 0.5)
-                      : const Color(0xFF30363D),
+                      ? AppColors.error.withValues(alpha: 0.5)
+                      : AppColors.cardBorder,
                 ),
+                boxShadow: _cerradurasAbiertas > 0
+                    ? [
+                        BoxShadow(
+                          color: AppColors.error.withValues(alpha: 0.2),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null,
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -387,8 +436,8 @@ class _CerradurasPageState extends State<CerradurasPage>
                     Icons.lock,
                     size: 14,
                     color: _cerradurasAbiertas > 0
-                        ? Colors.white
-                        : const Color(0xFF8B949E),
+                        ? AppColors.textWhite
+                        : AppColors.textSecondary,
                   ),
                   const SizedBox(width: 6),
                   Text(
@@ -397,8 +446,8 @@ class _CerradurasPageState extends State<CerradurasPage>
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                       color: _cerradurasAbiertas > 0
-                          ? Colors.white
-                          : const Color(0xFF8B949E),
+                          ? AppColors.textWhite
+                          : AppColors.textSecondary,
                     ),
                   ),
                 ],
@@ -436,9 +485,9 @@ class _CerradurasPageState extends State<CerradurasPage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       decoration: BoxDecoration(
-        color: const Color(0xFF161B22),
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF30363D)),
+        border: Border.all(color: AppColors.cardBorder),
       ),
       child: Row(
         children: [
@@ -450,7 +499,7 @@ class _CerradurasPageState extends State<CerradurasPage>
               color: const Color(0xFF7EE787),
             ),
           ),
-          Container(width: 1, height: 36, color: const Color(0xFF30363D)),
+          Container(width: 1, height: 36, color: AppColors.cardBorder),
           Expanded(
             child: _buildStatItem(
               icon: Icons.lock_open,
@@ -461,7 +510,7 @@ class _CerradurasPageState extends State<CerradurasPage>
                   : const Color(0xFF8B949E),
             ),
           ),
-          Container(width: 1, height: 36, color: const Color(0xFF30363D)),
+          Container(width: 1, height: 36, color: AppColors.cardBorder),
           Expanded(
             child: _buildStatItem(
               icon: Icons.battery_alert,
@@ -472,7 +521,7 @@ class _CerradurasPageState extends State<CerradurasPage>
                   : const Color(0xFF8B949E),
             ),
           ),
-          Container(width: 1, height: 36, color: const Color(0xFF30363D)),
+          Container(width: 1, height: 36, color: AppColors.cardBorder),
           Expanded(
             child: _buildStatItem(
               icon: Icons.wifi_off,
@@ -594,6 +643,17 @@ class _CerradurasPageState extends State<CerradurasPage>
     }
   }
 
+  Widget _buildCerradurasHorizontal() {
+    return ListView.builder(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      itemCount: _cerraduras.length,
+      itemBuilder: (context, index) {
+        return _buildCerraduraCard(index);
+      },
+    );
+  }
+
   Widget _buildListaCerraduras() {
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
@@ -609,20 +669,28 @@ class _CerradurasPageState extends State<CerradurasPage>
     final isSelected = _cerraduraSeleccionada == index;
 
     return GestureDetector(
-      onTap: () => setState(() => _cerraduraSeleccionada = index),
+      onTap: () {
+        setState(() {
+          _cerraduraSeleccionada = index;
+        });
+        // Detener el timer cuando el usuario selecciona manualmente
+        _autoScrollTimer?.cancel();
+        _autoScrollTimer = null;
+      },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(12),
+        margin: const EdgeInsets.only(right: 10),
+        width: 140,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         decoration: BoxDecoration(
-          color: const Color(0xFF161B22),
+          color: AppColors.cardBackground,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isSelected
                 ? cerradura.color.withValues(alpha: 0.6)
                 : !cerradura.cerrada
-                    ? const Color(0xFFFF6B6B).withValues(alpha: 0.4)
-                    : const Color(0xFF30363D),
+                    ? AppColors.error.withValues(alpha: 0.4)
+                    : AppColors.cardBorder,
             width: isSelected ? 2 : 1,
           ),
           boxShadow: isSelected
@@ -636,217 +704,145 @@ class _CerradurasPageState extends State<CerradurasPage>
               : null,
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Row(
+            // Icono con estado
+            Stack(
               children: [
-                // Icono con estado
-                Stack(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: cerradura.conectada
-                              ? [cerradura.color, cerradura.gradientEnd]
-                              : [
-                                  const Color(0xFF8B949E),
-                                  const Color(0xFF6E7681)
-                                ],
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: cerradura.conectada
-                                ? cerradura.color.withValues(alpha: 0.3)
-                                : Colors.transparent,
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Icon(
-                        cerradura.icono,
-                        color: Colors.white,
-                        size: 22,
-                      ),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: cerradura.conectada
+                          ? [cerradura.color, cerradura.gradientEnd]
+                          : [
+                              const Color(0xFF8B949E),
+                              const Color(0xFF6E7681)
+                            ],
                     ),
-                    // Indicador de estado
-                    Positioned(
-                      right: -2,
-                      top: -2,
-                      child: Container(
-                        padding: const EdgeInsets.all(3),
-                        decoration: BoxDecoration(
-                          color: cerradura.cerrada
-                              ? const Color(0xFF7EE787)
-                              : const Color(0xFFFF6B6B),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: const Color(0xFF161B22),
-                            width: 2,
-                          ),
-                        ),
-                        child: Icon(
-                          cerradura.cerrada ? Icons.lock : Icons.lock_open,
-                          size: 8,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(width: 12),
-
-                // Info
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              cerradura.nombre,
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          if (!cerradura.conectada) ...[
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 5, vertical: 2),
-                              decoration: BoxDecoration(
-                                color:
-                                    const Color(0xFFF85149).withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: const Text(
-                                'Offline',
-                                style: TextStyle(
-                                  fontSize: 8,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFFF85149),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.location_on,
-                            size: 11,
-                            color: Color(0xFF8B949E),
-                          ),
-                          const SizedBox(width: 3),
-                          Text(
-                            cerradura.ubicacion,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: Color(0xFF8B949E),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          const Icon(
-                            Icons.access_time,
-                            size: 11,
-                            color: Color(0xFF8B949E),
-                          ),
-                          const SizedBox(width: 3),
-                          Flexible(
-                            child: Text(
-                              _formatearTiempo(cerradura.ultimaActividad),
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: Color(0xFF8B949E),
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: cerradura.conectada
+                            ? cerradura.color.withValues(alpha: 0.3)
+                            : Colors.transparent,
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
                       ),
                     ],
                   ),
+                  child: Icon(
+                    cerradura.icono,
+                    color: Colors.white,
+                    size: 18,
+                  ),
                 ),
-
-                const SizedBox(width: 8),
-                
-                // Botón de bloqueo/desbloqueo
-                GestureDetector(
-                  onTap: cerradura.conectada
-                      ? () => _toggleCerradura(index)
-                      : null,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 8),
+                // Indicador de estado
+                Positioned(
+                  right: -2,
+                  top: -2,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
                     decoration: BoxDecoration(
-                      color: cerradura.conectada
-                          ? cerradura.cerrada
-                              ? const Color(0xFF7EE787).withValues(alpha: 0.15)
-                              : const Color(0xFFFF6B6B).withValues(alpha: 0.15)
-                          : const Color(0xFF21262D),
-                      borderRadius: BorderRadius.circular(10),
+                      color: cerradura.cerrada
+                          ? const Color(0xFF7EE787)
+                          : const Color(0xFFFF6B6B),
+                      shape: BoxShape.circle,
                       border: Border.all(
-                        color: cerradura.conectada
-                            ? cerradura.cerrada
-                                ? const Color(0xFF7EE787).withValues(alpha: 0.4)
-                                : const Color(0xFFFF6B6B).withValues(alpha: 0.4)
-                            : const Color(0xFF30363D),
+                        color: const Color(0xFF161B22),
+                        width: 1.5,
                       ),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          cerradura.cerrada ? Icons.lock : Icons.lock_open,
-                          size: 14,
-                          color: cerradura.conectada
-                              ? cerradura.cerrada
-                                  ? const Color(0xFF7EE787)
-                                  : const Color(0xFFFF6B6B)
-                              : const Color(0xFF8B949E),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          cerradura.cerrada ? 'Cerrada' : 'Abierta',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: cerradura.conectada
-                                ? cerradura.cerrada
-                                    ? const Color(0xFF7EE787)
-                                    : const Color(0xFFFF6B6B)
-                                : const Color(0xFF8B949E),
-                          ),
-                        ),
-                      ],
+                    child: Icon(
+                      cerradura.cerrada ? Icons.lock : Icons.lock_open,
+                      size: 7,
+                      color: Colors.white,
                     ),
                   ),
                 ),
               ],
             ),
 
-            // Detalles expandidos si está seleccionada
-            if (isSelected) ...[
-              const SizedBox(height: 12),
-              Container(
-                height: 1,
-                color: const Color(0xFF30363D),
+            const SizedBox(height: 8),
+
+            // Info
+            SizedBox(
+              width: double.infinity,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          cerradura.nombre,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      if (!cerradura.conectada) ...[
+                        const SizedBox(width: 3),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 3, vertical: 1),
+                          decoration: BoxDecoration(
+                            color:
+                                const Color(0xFFF85149).withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text(
+                            'Off',
+                            style: TextStyle(
+                              fontSize: 6,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFFF85149),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.location_on,
+                        size: 9,
+                        color: Color(0xFF8B949E),
+                      ),
+                      const SizedBox(width: 2),
+                      Flexible(
+                        child: Text(
+                          cerradura.ubicacion,
+                          style: const TextStyle(
+                            fontSize: 9,
+                            color: Color(0xFF8B949E),
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-              const SizedBox(height: 12),
-              _buildDetallesCerradura(cerradura),
-            ],
+            ),
           ],
         ),
       ),
@@ -1546,14 +1542,511 @@ class _CerradurasPageState extends State<CerradurasPage>
     }
   }
 
+  Widget _buildKpiCard() {
+    final cerradura = _cerraduras[_cerraduraSeleccionada];
+    final tieneAlertas = !cerradura.cerrada || cerradura.bateria < 20 || !cerradura.conectada;
+
+    return GestureDetector(
+      onTap: () {
+        // Detener el cambio automático cuando se hace click en la card
+        _autoScrollTimer?.cancel();
+        _autoScrollTimer = null;
+      },
+      child: Container(
+        height: 160,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+        decoration: BoxDecoration(
+          color: AppColors.cardBackground,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: tieneAlertas
+                ? AppColors.warning.withValues(alpha: 0.4)
+                : cerradura.color.withValues(alpha: 0.3),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: (tieneAlertas ? AppColors.warning : cerradura.color).withValues(alpha: 0.15),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Nombre de la cerradura arriba y centrado
+            Text(
+              cerradura.nombre,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            
+            const SizedBox(height: 15),
+            
+            // Resto de la información abajo
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Icono
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: cerradura.conectada
+                          ? [cerradura.color, cerradura.gradientEnd]
+                          : [
+                              const Color(0xFF8B949E),
+                              const Color(0xFF6E7681)
+                            ],
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: cerradura.conectada
+                            ? cerradura.color.withValues(alpha: 0.4)
+                            : Colors.transparent,
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    cerradura.icono,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                
+                // Estado y estadísticas
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          cerradura.cerrada ? Icons.lock : Icons.lock_open,
+                          size: 14,
+                          color: cerradura.cerrada
+                              ? const Color(0xFF7EE787)
+                              : const Color(0xFFFF6B6B),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          cerradura.cerrada ? 'Cerrada' : 'Abierta',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: cerradura.cerrada
+                                ? const Color(0xFF7EE787)
+                                : const Color(0xFFFF6B6B),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.battery_std,
+                          size: 12,
+                          color: cerradura.bateria < 20
+                              ? const Color(0xFFFFD700)
+                              : const Color(0xFF8B949E),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${cerradura.bateria}%',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: cerradura.bateria < 20
+                                ? const Color(0xFFFFD700)
+                                : const Color(0xFF8B949E),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildResumenGeneral() {
+    final totalCerraduras = _cerraduras.length;
+    final cerradurasCerradas = _cerradurasCerradas;
+    final cerradurasAbiertas = _cerradurasAbiertas;
+    final alertasBateria = _alertasBateria;
+    final porcentajeOperativo = totalCerraduras > 0 
+        ? ((totalCerraduras - _desconectadas) / totalCerraduras * 100).round() 
+        : 0;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.cardBackground,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: AppColors.cardBorder,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.cardShadow,
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: AppColors.info.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.dashboard,
+                  size: 14,
+                  color: AppColors.info,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Resumen General',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: _buildMetricaResumen(
+                  icon: Icons.lock,
+                  valor: '$totalCerraduras',
+                  label: 'Total',
+                  color: const Color(0xFF58A6FF),
+                ),
+              ),
+              Container(
+                width: 1,
+                height: 40,
+                color: const Color(0xFF30363D),
+              ),
+              Expanded(
+                child: _buildMetricaResumen(
+                  icon: Icons.lock,
+                  valor: '$cerradurasCerradas',
+                  label: 'Cerradas',
+                  color: const Color(0xFF7EE787),
+                ),
+              ),
+              Container(
+                width: 1,
+                height: 40,
+                color: const Color(0xFF30363D),
+              ),
+              Expanded(
+                child: _buildMetricaResumen(
+                  icon: Icons.lock_open,
+                  valor: '$cerradurasAbiertas',
+                  label: 'Abiertas',
+                  color: const Color(0xFFFF6B6B),
+                ),
+              ),
+              Container(
+                width: 1,
+                height: 40,
+                color: const Color(0xFF30363D),
+              ),
+              Expanded(
+                child: _buildMetricaResumen(
+                  icon: Icons.battery_alert,
+                  valor: '$alertasBateria',
+                  label: 'Batería',
+                  color: const Color(0xFFFFD700),
+                ),
+              ),
+              Container(
+                width: 1,
+                height: 40,
+                color: const Color(0xFF30363D),
+              ),
+              Expanded(
+                child: _buildMetricaResumen(
+                  icon: Icons.percent,
+                  valor: '$porcentajeOperativo%',
+                  label: 'Operativo',
+                  color: const Color(0xFFA78BFA),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetricaResumen({
+    required IconData icon,
+    required String valor,
+    required String label,
+    required Color color,
+  }) {
+    return Column(
+      children: [
+        Icon(icon, size: 18, color: color),
+        const SizedBox(height: 4),
+        Text(
+          valor,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 10,
+            color: Color(0xFF8B949E),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAlertasCard() {
+    final cerradurasAbiertas = _cerraduras.where((c) => !c.cerrada).toList();
+    final bateriaBaja = _cerraduras.where((c) => c.bateria < 20).toList();
+    final desconectadas = _cerraduras.where((c) => !c.conectada).toList();
+    final totalAlertas = cerradurasAbiertas.length + bateriaBaja.length + desconectadas.length;
+
+    return AnimatedBuilder(
+      animation: _alertBlinkAnimation,
+      builder: (context, child) {
+        final opacity = totalAlertas > 0 ? _alertBlinkAnimation.value : 1.0;
+        return Opacity(
+          opacity: opacity,
+          child: Container(
+            height: 150,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+            decoration: BoxDecoration(
+              color: AppColors.cardBackground,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: totalAlertas > 0
+                    ? AppColors.error.withValues(alpha: 0.8)
+                    : AppColors.cardBorder,
+                width: totalAlertas > 0 ? 2 : 1,
+              ),
+              boxShadow: totalAlertas > 0
+                  ? [
+                      BoxShadow(
+                        color: AppColors.error.withValues(alpha: 0.3 * opacity),
+                        blurRadius: 16,
+                        offset: const Offset(0, 4),
+                      ),
+                    ]
+                  : [
+                      BoxShadow(
+                        color: AppColors.cardShadow,
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Título arriba y centrado
+                Text(
+                  totalAlertas == 1 ? 'Alerta' : 'Alertas',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                
+                const SizedBox(height: 15),
+                
+                // Resto de la información abajo
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Icono de alerta
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF85149).withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFF85149).withValues(alpha: 0.4),
+                            blurRadius: 4,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.warning_amber_rounded,
+                        color: Color(0xFFF85149),
+                        size: 14,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    
+                    // Número de alertas
+                    Text(
+                      '$totalAlertas',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFF85149),
+                      ),
+                    ),
+                    if (totalAlertas > 0) ...[
+                      const SizedBox(width: 12),
+                      // Lista compacta de alertas
+                      Flexible(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (cerradurasAbiertas.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 2),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 3,
+                                      height: 3,
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFFFF6B6B),
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Flexible(
+                                      child: Text(
+                                        '${cerradurasAbiertas.length} abierta${cerradurasAbiertas.length > 1 ? 's' : ''}',
+                                        style: const TextStyle(
+                                          fontSize: 8,
+                                          color: Color(0xFFFF6B6B),
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            if (bateriaBaja.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 2),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 3,
+                                      height: 3,
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFFFFD700),
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Flexible(
+                                      child: Text(
+                                        '${bateriaBaja.length} batería baja',
+                                        style: const TextStyle(
+                                          fontSize: 8,
+                                          color: Color(0xFFFFD700),
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            if (desconectadas.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 2),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 3,
+                                      height: 3,
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFFF85149),
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Flexible(
+                                      child: Text(
+                                        '${desconectadas.length} offline',
+                                        style: const TextStyle(
+                                          fontSize: 8,
+                                          color: Color(0xFFF85149),
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   // Bottom Navigation Bar
   Widget _buildBottomNavigationBar() {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF161B22),
+        color: AppColors.cardBackground,
         border: Border(
           top: BorderSide(
-            color: const Color(0xFF30363D).withValues(alpha: 0.5),
+            color: AppColors.cardBorder.withValues(alpha: 0.5),
             width: 1,
           ),
         ),

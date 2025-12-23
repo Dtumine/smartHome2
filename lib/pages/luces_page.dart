@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:heroicons/heroicons.dart';
 import 'dart:math' as math;
+import '../theme/app_colors.dart';
 
 class LucesPage extends StatefulWidget {
   const LucesPage({super.key});
@@ -147,18 +148,10 @@ class _LucesPageState extends State<LucesPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0D1117),
+      backgroundColor: AppColors.backgroundPrimary,
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF0D1117),
-              Color(0xFF161B22),
-              Color(0xFF0D1117),
-            ],
-          ),
+          gradient: AppColors.celestialBlueGradient,
         ),
         child: SafeArea(
           child: Column(

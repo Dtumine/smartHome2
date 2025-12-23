@@ -10,6 +10,7 @@ import 'pages/camaras_page.dart';
 import 'pages/sensores_page.dart';
 import 'pages/termostato_page.dart';
 import 'pages/cerraduras_page.dart';
+import 'theme/app_colors.dart';
 
 void main() {
   runApp(const ProviderScope(child: SmartHomeApp()));
@@ -24,31 +25,47 @@ class SmartHomeApp extends StatelessWidget {
       title: 'Smart Home',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF0D1117),
-        primaryColor: const Color(0xFF58A6FF),
+        brightness: Brightness.dark, // Tema oscuro original
+        scaffoldBackgroundColor: AppColors.backgroundPrimary,
+        primaryColor: AppColors.skyBlue,
         colorScheme: const ColorScheme.dark(
-          primary: Color(0xFF58A6FF),
-          secondary: Color(0xFF7EE787),
-          surface: Color(0xFF161B22),
-          error: Color(0xFFF85149),
+          primary: AppColors.skyBlue,
+          secondary: AppColors.success,
+          surface: AppColors.cardBackground,
+          error: AppColors.error,
+          onPrimary: AppColors.textWhite,
+          onSecondary: AppColors.textWhite,
+          onSurface: AppColors.textPrimary,
+          onError: AppColors.textWhite,
         ),
         fontFamily: 'Segoe UI',
         textTheme: const TextTheme(
           headlineLarge: TextStyle(
             fontSize: 32,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: AppColors.textPrimary,
             letterSpacing: -0.5,
           ),
           titleMedium: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: Colors.white,
+            color: AppColors.textPrimary,
           ),
           bodyMedium: TextStyle(
             fontSize: 14,
-            color: Color(0xFF8B949E),
+            color: AppColors.textSecondary,
+          ),
+        ),
+        cardTheme: CardThemeData(
+          color: AppColors.cardBackground,
+          elevation: 2,
+          shadowColor: AppColors.cardShadow,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(
+              color: AppColors.cardBorder,
+              width: 1,
+            ),
           ),
         ),
       ),

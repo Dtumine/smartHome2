@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:heroicons/heroicons.dart';
+import '../theme/app_colors.dart';
 
 class CamarasPage extends StatefulWidget {
   const CamarasPage({super.key});
@@ -11,6 +12,7 @@ class CamarasPage extends StatefulWidget {
 
 class _CamarasPageState extends State<CamarasPage> {
   int _camaraSeleccionada = 0;
+  int _selectedNavIndex = 0;
 
   final List<Camara> _camaras = [
     Camara(
@@ -76,18 +78,10 @@ class _CamarasPageState extends State<CamarasPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0D1117),
+      backgroundColor: AppColors.backgroundPrimary,
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF0D1117),
-              Color(0xFF161B22),
-              Color(0xFF0D1117),
-            ],
-          ),
+          gradient: AppColors.celestialBlueGradient,
         ),
         child: SafeArea(
           child: Column(
@@ -180,7 +174,7 @@ class _CamarasPageState extends State<CamarasPage> {
 
               // Vista principal de la cámara seleccionada (altura flexible pero limitada)
               Expanded(
-                flex: 5,
+                flex: 4,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: _buildVistaPrevia(),
@@ -206,6 +200,110 @@ class _CamarasPageState extends State<CamarasPage> {
               const SizedBox(height: 12),
             ],
           ),
+        ),
+      ),
+      bottomNavigationBar: _buildBottomNavigationBar(),
+    );
+  }
+
+  // Bottom Navigation Bar
+  Widget _buildBottomNavigationBar() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF161B22),
+        border: Border(
+          top: BorderSide(
+            color: const Color(0xFF30363D).withValues(alpha: 0.5),
+            width: 1,
+          ),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 20,
+            offset: const Offset(0, -5),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildNavItem(
+                icon: HeroIcons.home,
+                label: 'Home',
+                index: 0,
+              ),
+              _buildNavItem(
+                icon: HeroIcons.squares2x2,
+                label: 'Panel',
+                index: 1,
+              ),
+              _buildNavItem(
+                icon: HeroIcons.bell,
+                label: 'Alertas',
+                index: 2,
+              ),
+              _buildNavItem(
+                icon: HeroIcons.cog6Tooth,
+                label: 'Ajustes',
+                index: 3,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem({
+    required HeroIcons icon,
+    required String label,
+    required int index,
+  }) {
+    final isSelected = _selectedNavIndex == index;
+    final color = isSelected ? const Color(0xFF58A6FF) : const Color(0xFF8B949E);
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedNavIndex = index;
+        });
+        if (index == 0) {
+          context.go('/');
+        }
+      },
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? const Color(0xFF58A6FF).withValues(alpha: 0.15)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            HeroIcon(
+              icon,
+              style: isSelected ? HeroIconStyle.solid : HeroIconStyle.outline,
+              color: color,
+              size: 24,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                color: color,
+              ),
+            ),
+          ],
         ),
       ),
     );

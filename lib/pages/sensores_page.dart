@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:heroicons/heroicons.dart';
+import '../theme/app_colors.dart';
 
 class SensoresPage extends StatefulWidget {
   const SensoresPage({super.key});
@@ -9,9 +11,12 @@ class SensoresPage extends StatefulWidget {
   State<SensoresPage> createState() => _SensoresPageState();
 }
 
-class _SensoresPageState extends State<SensoresPage> {
+class _SensoresPageState extends State<SensoresPage> with SingleTickerProviderStateMixin {
   int _categoriaSeleccionada = 0;
   int _selectedNavIndex = 0;
+  Timer? _autoScrollTimer;
+  late AnimationController _alertBlinkController;
+  late Animation<double> _alertBlinkAnimation;
 
   final List<CategoriaSensor> _categorias = [
     CategoriaSensor(
@@ -85,20 +90,42 @@ class _SensoresPageState extends State<SensoresPage> {
       0, (sum, cat) => sum + cat.sensores.where((s) => s.alerta).length);
 
   @override
+  void initState() {
+    super.initState();
+    // Iniciar el cambio automático cada 3 segundos
+    _autoScrollTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      if (mounted) {
+        setState(() {
+          _categoriaSeleccionada = (_categoriaSeleccionada + 1) % _categorias.length;
+        });
+      }
+    });
+
+    // Animación de titileo para alertas
+    _alertBlinkController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _alertBlinkAnimation = Tween<double>(begin: 0.3, end: 1.0).animate(
+      CurvedAnimation(parent: _alertBlinkController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _autoScrollTimer?.cancel();
+    _alertBlinkController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0D1117),
+      backgroundColor: AppColors.backgroundPrimary,
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF0D1117),
-              Color(0xFF161B22),
-              Color(0xFF0D1117),
-            ],
-          ),
+          gradient: AppColors.celestialBlueGradient,
         ),
         child: SafeArea(
           child: Column(
@@ -186,29 +213,55 @@ class _SensoresPageState extends State<SensoresPage> {
 
               const SizedBox(height: 16),
 
-              // KPI Card con detalles de la categoría seleccionada (ARRIBA)
+              // KPI Card principal
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: _buildKpiCard(),
               ),
 
+              const SizedBox(height: 12),
+
+              // Alertas Card debajo
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: _buildAlertasCard(),
+              ),
+
+              const SizedBox(height: 12),
+
+              // Panel de resumen general
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: _buildResumenGeneral(),
+              ),
+
               const SizedBox(height: 14),
 
-              // Lista de categorías (cards seleccionables) - ABAJO con scroll
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                  child: Column(
-                    children: _categorias.asMap().entries.map((entry) => 
-                      _buildCategoriaCard(entry.value, entry.key)).toList(),
-                  ),
-                ),
+              const SizedBox(height: 12),
+
+              // Lista de categorías (cards seleccionables) - Scroll horizontal
+              SizedBox(
+                height: 85,
+                child: _buildCategoriasHorizontal(),
               ),
+
+              const SizedBox(height: 12),
             ],
           ),
         ),
       ),
       bottomNavigationBar: _buildBottomNavigationBar(),
+    );
+  }
+
+  Widget _buildCategoriasHorizontal() {
+    return ListView.builder(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      itemCount: _categorias.length,
+      itemBuilder: (context, index) {
+        return _buildCategoriaCard(_categorias[index], index);
+      },
     );
   }
 
@@ -224,11 +277,15 @@ class _SensoresPageState extends State<SensoresPage> {
         setState(() {
           _categoriaSeleccionada = index;
         });
+        // Detener el timer cuando el usuario selecciona manualmente
+        _autoScrollTimer?.cancel();
+        _autoScrollTimer = null;
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+        margin: const EdgeInsets.only(right: 10),
+        width: 160,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
           color: const Color(0xFF161B22),
           borderRadius: BorderRadius.circular(16),
@@ -254,7 +311,7 @@ class _SensoresPageState extends State<SensoresPage> {
           children: [
             // Icono
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
@@ -264,53 +321,57 @@ class _SensoresPageState extends State<SensoresPage> {
                     categoria.gradientEnd,
                   ],
                 ),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
                 boxShadow: [
                   BoxShadow(
                     color: categoria.color.withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
               child: Icon(
                 categoria.icono,
                 color: Colors.white,
-                size: 22,
+                size: 18,
               ),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 10),
 
             // Info
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Row(
                     children: [
-                      Text(
-                        categoria.nombre,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                      Flexible(
+                        child: Text(
+                          categoria.nombre,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       if (tieneAlertas) ...[
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 4),
                         const Icon(
                           Icons.warning_amber_rounded,
-                          size: 16,
+                          size: 12,
                           color: Color(0xFFFFD700),
                         ),
                       ],
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 3),
                   Text(
-                    '${categoria.sensores.length} sensores · $sensoresActivos activos',
+                    '${categoria.sensores.length} sensores',
                     style: const TextStyle(
-                      fontSize: 12,
+                      fontSize: 10,
                       color: Color(0xFF8B949E),
                     ),
                   ),
@@ -322,7 +383,7 @@ class _SensoresPageState extends State<SensoresPage> {
             Text(
               valorPrincipal,
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: tieneAlertas ? const Color(0xFFFFD700) : categoria.color,
               ),
@@ -340,130 +401,195 @@ class _SensoresPageState extends State<SensoresPage> {
     final activos = categoria.sensores.where((s) => s.activo).length;
     final valorPrincipal = _getValorPrincipal(categoria);
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 45),
-      decoration: BoxDecoration(
-        color: const Color(0xFF161B22),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: tieneAlertas 
-              ? const Color(0xFFFFD700).withValues(alpha: 0.4)
-              : categoria.color.withValues(alpha: 0.3),
+    return GestureDetector(
+      onTap: () {
+        // Detener el cambio automático cuando se hace click en la card
+        _autoScrollTimer?.cancel();
+        _autoScrollTimer = null;
+      },
+      child: Container(
+        height: 160,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+        decoration: BoxDecoration(
+          color: const Color(0xFF161B22),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: tieneAlertas 
+                ? const Color(0xFFFFD700).withValues(alpha: 0.4)
+                : categoria.color.withValues(alpha: 0.3),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: (tieneAlertas ? const Color(0xFFFFD700) : categoria.color).withValues(alpha: 0.15),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        boxShadow: [
-          BoxShadow(
-            color: (tieneAlertas ? const Color(0xFFFFD700) : categoria.color).withValues(alpha: 0.15),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Row(
+        child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Icono
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [categoria.color, categoria.gradientEnd],
-              ),
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                  color: categoria.color.withValues(alpha: 0.4),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Icon(
-              categoria.icono,
+          // Nombre de la categoría arriba y centrado
+          Text(
+            categoria.nombre,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
               color: Colors.white,
-              size: 26,
             ),
+            textAlign: TextAlign.center,
           ),
-          const SizedBox(width: 12),
           
-          // Info central
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  categoria.nombre,
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+          const SizedBox(height: 12),
+          
+          // Resto de la información abajo
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Icono
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [categoria.color, categoria.gradientEnd],
                   ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 4,
-                  children: [
-                    _buildKpiStat('${categoria.sensores.length}', 'Total', categoria.color),
-                    _buildKpiStat('$activos', 'Act.', const Color(0xFF7EE787)),
-                    if (alertas > 0)
-                      _buildKpiStat('$alertas', 'Alert.', const Color(0xFFFFD700)),
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: categoria.color.withValues(alpha: 0.4),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
                   ],
                 ),
-              ],
-            ),
-          ),
-          
-          const SizedBox(width: 8),
-          
-          // Valor principal
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                valorPrincipal,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: tieneAlertas ? const Color(0xFFFFD700) : categoria.color,
+                child: Icon(
+                  categoria.icono,
+                  color: Colors.white,
+                  size: 18,
                 ),
               ),
-              const SizedBox(height: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: tieneAlertas
-                      ? const Color(0xFFFFD700).withValues(alpha: 0.15)
-                      : const Color(0xFF7EE787).withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      tieneAlertas ? Icons.warning_amber_rounded : Icons.check_circle,
-                      size: 11,
-                      color: tieneAlertas ? const Color(0xFFFFD700) : const Color(0xFF7EE787),
+              const SizedBox(width: 12),
+              
+              // Estadísticas
+              Wrap(
+                spacing: 10,
+                runSpacing: 4,
+                alignment: WrapAlignment.center,
+                children: [
+                  _buildKpiStat('${categoria.sensores.length}', 'Total', categoria.color),
+                  _buildKpiStat('$activos', 'Act.', const Color(0xFF7EE787)),
+                  if (alertas > 0)
+                    _buildKpiStat('$alertas', 'Alert.', const Color(0xFFFFD700)),
+                ],
+              ),
+              
+              const SizedBox(width: 12),
+              
+              // Valor principal
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    valorPrincipal,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: tieneAlertas ? const Color(0xFFFFD700) : categoria.color,
                     ),
-                    const SizedBox(width: 3),
-                    Text(
-                      tieneAlertas ? 'Alerta' : 'OK',
-                      style: TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w600,
-                        color: tieneAlertas ? const Color(0xFFFFD700) : const Color(0xFF7EE787),
-                      ),
+                  ),
+                  const SizedBox(height: 2),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: tieneAlertas
+                          ? const Color(0xFFFFD700).withValues(alpha: 0.15)
+                          : const Color(0xFF7EE787).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(6),
                     ),
-                  ],
-                ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          tieneAlertas ? Icons.warning_amber_rounded : Icons.check_circle,
+                          size: 9,
+                          color: tieneAlertas ? const Color(0xFFFFD700) : const Color(0xFF7EE787),
+                        ),
+                        const SizedBox(width: 2),
+                        Text(
+                          tieneAlertas ? 'Alerta' : 'OK',
+                          style: TextStyle(
+                            fontSize: 7,
+                            fontWeight: FontWeight.w600,
+                            color: tieneAlertas ? const Color(0xFFFFD700) : const Color(0xFF7EE787),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
+        ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSensorItem(Sensor sensor, Color categoriaColor) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          // Indicador de estado
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: sensor.alerta
+                  ? const Color(0xFFFFD700)
+                  : sensor.activo
+                      ? const Color(0xFF7EE787)
+                      : const Color(0xFF8B949E),
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Nombre del sensor
+          Expanded(
+            child: Text(
+              sensor.nombre,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: sensor.alerta ? FontWeight.w600 : FontWeight.normal,
+                color: sensor.alerta ? const Color(0xFFFFD700) : Colors.white,
+              ),
+            ),
+          ),
+          // Valor
+          Text(
+            sensor.valor,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: sensor.alerta
+                  ? const Color(0xFFFFD700)
+                  : categoriaColor,
+            ),
+          ),
+          if (sensor.alerta) ...[
+            const SizedBox(width: 4),
+            const Icon(
+              Icons.warning_amber_rounded,
+              size: 12,
+              color: Color(0xFFFFD700),
+            ),
+          ],
         ],
       ),
     );
@@ -476,12 +602,142 @@ class _SensoresPageState extends State<SensoresPage> {
         Text(
           valor,
           style: TextStyle(
-            fontSize: 15,
+            fontSize: 13,
             fontWeight: FontWeight.bold,
             color: color,
           ),
         ),
-        const SizedBox(width: 3),
+        const SizedBox(width: 2),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 9,
+            color: Color(0xFF8B949E),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildResumenGeneral() {
+    final totalSensores = _categorias.fold(0, (sum, cat) => sum + cat.sensores.length);
+    final sensoresActivos = _sensoresActivos;
+    final alertasActivas = _alertasActivas;
+    final porcentajeActivos = totalSensores > 0 ? (sensoresActivos / totalSensores * 100).round() : 0;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF161B22),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: const Color(0xFF30363D),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF58A6FF).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.dashboard,
+                  size: 14,
+                  color: Color(0xFF58A6FF),
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'Resumen General',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: _buildMetricaResumen(
+                  icon: Icons.sensors,
+                  valor: '$totalSensores',
+                  label: 'Total',
+                  color: const Color(0xFF58A6FF),
+                ),
+              ),
+              Container(
+                width: 1,
+                height: 40,
+                color: const Color(0xFF30363D),
+              ),
+              Expanded(
+                child: _buildMetricaResumen(
+                  icon: Icons.check_circle,
+                  valor: '$sensoresActivos',
+                  label: 'Activos',
+                  color: const Color(0xFF7EE787),
+                ),
+              ),
+              Container(
+                width: 1,
+                height: 40,
+                color: const Color(0xFF30363D),
+              ),
+              Expanded(
+                child: _buildMetricaResumen(
+                  icon: Icons.warning_amber_rounded,
+                  valor: '$alertasActivas',
+                  label: 'Alertas',
+                  color: const Color(0xFFFFD700),
+                ),
+              ),
+              Container(
+                width: 1,
+                height: 40,
+                color: const Color(0xFF30363D),
+              ),
+              Expanded(
+                child: _buildMetricaResumen(
+                  icon: Icons.percent,
+                  valor: '$porcentajeActivos%',
+                  label: 'Operativo',
+                  color: const Color(0xFFA78BFA),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetricaResumen({
+    required IconData icon,
+    required String valor,
+    required String label,
+    required Color color,
+  }) {
+    return Column(
+      children: [
+        Icon(icon, size: 18, color: color),
+        const SizedBox(height: 4),
+        Text(
+          valor,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        const SizedBox(height: 2),
         Text(
           label,
           style: const TextStyle(
@@ -490,6 +746,151 @@ class _SensoresPageState extends State<SensoresPage> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildAlertasCard() {
+    final alertas = _categorias
+        .expand((cat) => cat.sensores.where((s) => s.alerta))
+        .toList();
+
+    return AnimatedBuilder(
+      animation: _alertBlinkAnimation,
+      builder: (context, child) {
+        final opacity = alertas.isNotEmpty ? _alertBlinkAnimation.value : 1.0;
+        return Opacity(
+          opacity: opacity,
+          child: Container(
+            height: 150,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+            decoration: BoxDecoration(
+              color: const Color(0xFF161B22),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: alertas.isNotEmpty
+                    ? const Color(0xFFF85149).withValues(alpha: 0.8)
+                    : const Color(0xFF30363D),
+                width: alertas.isNotEmpty ? 2 : 1,
+              ),
+              boxShadow: alertas.isNotEmpty
+                  ? [
+                      BoxShadow(
+                        color: const Color(0xFFF85149).withValues(alpha: 0.3 * opacity),
+                        blurRadius: 16,
+                        offset: const Offset(0, 4),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Título arriba y centrado
+                Text(
+                  alertas.length == 1 ? 'Alerta' : 'Alertas',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                
+                const SizedBox(height: 15),
+                
+                // Resto de la información abajo
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Icono de alerta
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF85149).withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFF85149).withValues(alpha: 0.4),
+                            blurRadius: 4,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.warning_amber_rounded,
+                        color: Color(0xFFF85149),
+                        size: 14,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    
+                    // Número de alertas
+                    Text(
+                      '${alertas.length}',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFF85149),
+                      ),
+                    ),
+                    if (alertas.isNotEmpty) ...[
+                      const SizedBox(width: 12),
+                      // Lista compacta de alertas
+                      Flexible(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ...alertas.take(2).map((sensor) {
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 2),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 3,
+                                      height: 3,
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFFF85149),
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Flexible(
+                                      child: Text(
+                                        sensor.nombre,
+                                        style: const TextStyle(
+                                          fontSize: 8,
+                                          color: Color(0xFFF85149),
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }),
+                            if (alertas.length > 2)
+                              Text(
+                                '+${alertas.length - 2} más',
+                                style: const TextStyle(
+                                  fontSize: 7,
+                                  color: Color(0xFF8B949E),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

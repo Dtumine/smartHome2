@@ -4,6 +4,7 @@ import 'package:heroicons/heroicons.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../data/smart_home_data.dart';
 import '../widgets/smart_home_card_compact.dart';
+import '../theme/app_colors.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -20,15 +21,7 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF0D1117),
-              Color(0xFF161B22),
-              Color(0xFF0D1117),
-            ],
-          ),
+          gradient: AppColors.celestialBlueGradient,
         ),
         child: SafeArea(
           child: CustomScrollView(
