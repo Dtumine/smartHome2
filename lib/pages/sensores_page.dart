@@ -88,6 +88,14 @@ class _SensoresPageState extends State<SensoresPage> with SingleTickerProviderSt
 
   int get _alertasActivas => _categorias.fold(
       0, (sum, cat) => sum + cat.sensores.where((s) => s.alerta).length);
+  
+  // Calcular total de alertas (sensores + cerraduras)
+  int get _totalAlertas {
+    final alertasSensores = _alertasActivas;
+    // Alertas de cerraduras (simuladas - en producción vendrían de un provider)
+    final alertasCerraduras = 4; // Garage abierta, Garage batería baja, Puerta Lateral batería baja, Puerta Lateral desconectada
+    return alertasSensores + alertasCerraduras;
+  }
 
   @override
   void initState() {
@@ -105,9 +113,13 @@ class _SensoresPageState extends State<SensoresPage> with SingleTickerProviderSt
     _alertBlinkController = AnimationController(
       duration: const Duration(milliseconds: 1000),
       vsync: this,
-    )..repeat(reverse: true);
+    );
+    
+    if (_totalAlertas > 0) {
+      _alertBlinkController.repeat(reverse: true);
+    }
 
-    _alertBlinkAnimation = Tween<double>(begin: 0.3, end: 1.0).animate(
+    _alertBlinkAnimation = Tween<double>(begin: 0.4, end: 1.0).animate(
       CurvedAnimation(parent: _alertBlinkController, curve: Curves.easeInOut),
     );
   }
@@ -951,16 +963,52 @@ class _SensoresPageState extends State<SensoresPage> with SingleTickerProviderSt
     required int index,
   }) {
     final isSelected = _selectedNavIndex == index;
-    final color = isSelected ? const Color(0xFF58A6FF) : const Color(0xFF8B949E);
+    final isAlertas = index == 2;
+    final tieneAlertas = _totalAlertas > 0;
+    
+    // Color para el icono de alertas: rojo parpadeante si hay alertas, normal si no
+    Color iconColor;
+    if (isAlertas && tieneAlertas && !isSelected) {
+      // Usar AnimatedBuilder para el parpadeo
+      return AnimatedBuilder(
+        animation: _alertBlinkAnimation,
+        builder: (context, child) {
+          // Parpadeo entre rojo intenso y rojo más claro para mayor visibilidad
+          iconColor = Color.lerp(
+            const Color(0xFFF85149), // Rojo intenso
+            const Color(0xFFFF6B6B), // Rojo más claro
+            _alertBlinkAnimation.value,
+          )!;
+          return _buildNavItemContent(icon, label, index, isSelected, iconColor);
+        },
+      );
+    } else {
+      iconColor = isSelected ? const Color(0xFF58A6FF) : const Color(0xFF8B949E);
+      return _buildNavItemContent(icon, label, index, isSelected, iconColor);
+    }
+  }
 
+  Widget _buildNavItemContent(
+    HeroIcons icon,
+    String label,
+    int index,
+    bool isSelected,
+    Color color,
+  ) {
     return GestureDetector(
       onTap: () {
         setState(() {
           _selectedNavIndex = index;
         });
-        // Navegar a Home si se presiona
+        // Navegar según el índice
         if (index == 0) {
           context.go('/');
+        } else if (index == 1) {
+          context.push('/panel');
+        } else if (index == 2) {
+          context.push('/alertas');
+        } else if (index == 3) {
+          context.push('/ajustes');
         }
       },
       behavior: HitTestBehavior.opaque,

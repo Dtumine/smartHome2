@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:heroicons/heroicons.dart';
 import 'dart:math' as math;
+import 'dart:async';
 import '../theme/app_colors.dart';
 
 class TermostatoPage extends StatefulWidget {
@@ -12,10 +13,25 @@ class TermostatoPage extends StatefulWidget {
 }
 
 class _TermostatoPageState extends State<TermostatoPage>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   // Zona seleccionada
   int _zonaSeleccionada = 0;
   int _selectedNavIndex = 0;
+  
+  // Animación de parpadeo para alertas
+  late AnimationController _alertBlinkController;
+  late Animation<double> _alertBlinkAnimation;
+  
+  // Calcular total de alertas activas
+  int get _totalAlertas {
+    // Alertas de sensores (simuladas - en producción vendrían de un provider)
+    final alertasSensores = 4; // Entrada, Baño Principal, Garage, Dormitorio 1
+    
+    // Alertas de cerraduras (simuladas)
+    final alertasCerraduras = 4; // Garage abierta, Garage batería baja, Puerta Lateral batería baja, Puerta Lateral desconectada
+    
+    return alertasSensores + alertasCerraduras;
+  }
 
   // Modos del termostato
   int _modoSeleccionado = 2; // 0: Off, 1: Frío, 2: Calor, 3: Auto
@@ -23,6 +39,13 @@ class _TermostatoPageState extends State<TermostatoPage>
   // Animación del dial
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
+
+  // Control de aceleración para botones de temperatura
+  Timer? _tempChangeTimer;
+  double _currentAcceleration = 1.0;
+  static const double _baseInterval = 150.0; // ms entre cambios iniciales (reducido de 250)
+  static const double _minInterval = 15.0; // ms mínimo (máxima velocidad) (reducido de 40)
+  static const double _accelerationRate = 0.5; // Factor de aceleración (menor = más rápido) (reducido de 0.7)
 
   // Límites de temperatura por modo
   static const double _tempMinFrio = 16.0;
@@ -222,6 +245,19 @@ class _TermostatoPageState extends State<TermostatoPage>
   @override
   void initState() {
     super.initState();
+    // Animación de parpadeo para alertas
+    _alertBlinkController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+    
+    if (_totalAlertas > 0) {
+      _alertBlinkController.repeat(reverse: true);
+    }
+    
+    _alertBlinkAnimation = Tween<double>(begin: 0.4, end: 1.0).animate(
+      CurvedAnimation(parent: _alertBlinkController, curve: Curves.easeInOut),
+    );
     _pulseController = AnimationController(
       duration: const Duration(milliseconds: 1500),
       vsync: this,
@@ -235,6 +271,8 @@ class _TermostatoPageState extends State<TermostatoPage>
   @override
   void dispose() {
     _pulseController.dispose();
+    _alertBlinkController.dispose();
+    _tempChangeTimer?.cancel();
     super.dispose();
   }
 
@@ -256,6 +294,39 @@ class _TermostatoPageState extends State<TermostatoPage>
       }
       _zonas[_zonaSeleccionada].encendido = true;
     });
+  }
+
+  void _iniciarCambioTemperatura(double delta) {
+    // Cambio inmediato al presionar
+    _cambiarTemperatura(delta);
+    
+    // Reiniciar aceleración
+    _currentAcceleration = 1.0;
+    
+    // Cancelar timer existente si hay uno
+    _tempChangeTimer?.cancel();
+    
+    // Crear nuevo timer con aceleración progresiva
+    void _scheduleNextChange() {
+      final interval = (_baseInterval * _currentAcceleration).clamp(_minInterval, _baseInterval);
+      
+      _tempChangeTimer = Timer(Duration(milliseconds: interval.toInt()), () {
+        if (mounted) {
+          _cambiarTemperatura(delta);
+          // Acelerar para el próximo cambio
+          _currentAcceleration *= _accelerationRate;
+          _scheduleNextChange();
+        }
+      });
+    }
+    
+    _scheduleNextChange();
+  }
+
+  void _detenerCambioTemperatura() {
+    _tempChangeTimer?.cancel();
+    _tempChangeTimer = null;
+    _currentAcceleration = 1.0;
   }
 
   void _setTemperatura(double temp) {
@@ -450,15 +521,52 @@ class _TermostatoPageState extends State<TermostatoPage>
     required int index,
   }) {
     final isSelected = _selectedNavIndex == index;
-    final color = isSelected ? const Color(0xFF58A6FF) : const Color(0xFF8B949E);
+    final isAlertas = index == 2;
+    final tieneAlertas = _totalAlertas > 0;
+    
+    // Color para el icono de alertas: rojo parpadeante si hay alertas, normal si no
+    Color iconColor;
+    if (isAlertas && tieneAlertas && !isSelected) {
+      // Usar AnimatedBuilder para el parpadeo
+      return AnimatedBuilder(
+        animation: _alertBlinkAnimation,
+        builder: (context, child) {
+          // Parpadeo entre rojo intenso y rojo más claro para mayor visibilidad
+          iconColor = Color.lerp(
+            const Color(0xFFF85149), // Rojo intenso
+            const Color(0xFFFF6B6B), // Rojo más claro
+            _alertBlinkAnimation.value,
+          )!;
+          return _buildNavItemContent(icon, label, index, isSelected, iconColor);
+        },
+      );
+    } else {
+      iconColor = isSelected ? const Color(0xFF58A6FF) : const Color(0xFF8B949E);
+      return _buildNavItemContent(icon, label, index, isSelected, iconColor);
+    }
+  }
 
+  Widget _buildNavItemContent(
+    HeroIcons icon,
+    String label,
+    int index,
+    bool isSelected,
+    Color color,
+  ) {
     return GestureDetector(
       onTap: () {
         setState(() {
           _selectedNavIndex = index;
         });
+        // Navegar según el índice
         if (index == 0) {
           context.go('/');
+        } else if (index == 1) {
+          context.push('/panel');
+        } else if (index == 2) {
+          context.push('/alertas');
+        } else if (index == 3) {
+          context.push('/ajustes');
         }
       },
       behavior: HitTestBehavior.opaque,
@@ -778,19 +886,19 @@ class _TermostatoPageState extends State<TermostatoPage>
                     ),
                   ),
 
-                  // Botones +/-
+                  // Botones +/- con aceleración
                   Positioned(
                     left: 10,
                     child: _buildTempButton(
                       icon: Icons.remove,
-                      onTap: () => _cambiarTemperatura(-0.5),
+                      delta: -0.5,
                     ),
                   ),
                   Positioned(
                     right: 10,
                     child: _buildTempButton(
                       icon: Icons.add,
-                      onTap: () => _cambiarTemperatura(0.5),
+                      delta: 0.5,
                     ),
                   ),
                 ],
@@ -829,9 +937,17 @@ class _TermostatoPageState extends State<TermostatoPage>
     }
   }
 
-  Widget _buildTempButton({required IconData icon, required VoidCallback onTap}) {
+  Widget _buildTempButton({required IconData icon, required double delta}) {
     return GestureDetector(
-      onTap: onTap,
+      onTapDown: (_) {
+        _iniciarCambioTemperatura(delta);
+      },
+      onTapUp: (_) {
+        _detenerCambioTemperatura();
+      },
+      onTapCancel: () {
+        _detenerCambioTemperatura();
+      },
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(

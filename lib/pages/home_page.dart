@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:heroicons/heroicons.dart';
 import 'package:fl_chart/fl_chart.dart';
-import '../data/smart_home_data.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../models/smart_home_option.dart';
+import '../services/panel_service.dart';
 import '../widgets/smart_home_card_compact.dart';
 import '../theme/app_colors.dart';
 
@@ -13,8 +15,47 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin {
   int _selectedIndex = 0;
+  
+  // Animación de parpadeo para alertas
+  late AnimationController _alertBlinkController;
+  late Animation<double> _alertBlinkAnimation;
+  
+  // Calcular total de alertas activas
+  int get _totalAlertas {
+    // Alertas de sensores (simuladas - en producción vendrían de un provider)
+    final alertasSensores = 4; // Entrada, Baño Principal, Garage, Dormitorio 1
+    
+    // Alertas de cerraduras (simuladas)
+    final alertasCerraduras = 4; // Garage abierta, Garage batería baja, Puerta Lateral batería baja, Puerta Lateral desconectada
+    
+    return alertasSensores + alertasCerraduras;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Animación de parpadeo para alertas
+    _alertBlinkController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+    
+    if (_totalAlertas > 0) {
+      _alertBlinkController.repeat(reverse: true);
+    }
+    
+    _alertBlinkAnimation = Tween<double>(begin: 0.4, end: 1.0).animate(
+      CurvedAnimation(parent: _alertBlinkController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _alertBlinkController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,32 +74,67 @@ class _HomePageState extends State<HomePage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Header con logo, título y botones
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '¡Bienvenido! 👋',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.copyWith(fontSize: 13),
-                              ),
-                              const SizedBox(height: 2),
-                              const Text(
-                                'Mi Hogar',
-                                style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                  letterSpacing: -0.5,
+                          // Logo y título
+                          Flexible(
+                            child: Row(
+                              children: [
+                                // Logo circular
+                                Container(
+                                  width: 50,
+                                  height: 50,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.3),
+                                        blurRadius: 12,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: ClipOval(
+                                    child: Image.asset(
+                                      'assets/images/logo.png',
+                                      width: 50,
+                                      height: 50,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) {
+                                        // Si la imagen no existe, mostrar un placeholder
+                                        return Container(
+                                          color: const Color(0xFF21262D),
+                                          child: const Icon(
+                                            Icons.home,
+                                            color: Color(0xFF58A6FF),
+                                            size: 24,
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 12),
+                                Flexible(
+                                  child: Text(
+                                    'Smart Home',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                      letterSpacing: -0.5,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
+                          // Botones de notificaciones y perfil
                           Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Container(
                                 padding: const EdgeInsets.all(10),
@@ -79,7 +155,7 @@ class _HomePageState extends State<HomePage> {
                               ),
                               const SizedBox(width: 10),
                               GestureDetector(
-                                onTap: () => context.push('/perfil'),
+                                onTap: () => context.push('/ajustes'),
                                 child: Container(
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
@@ -95,11 +171,26 @@ class _HomePageState extends State<HomePage> {
                                       ),
                                     ],
                                   ),
-                                  child: const CircleAvatar(
+                                  child: CircleAvatar(
                                     radius: 20,
-                                    backgroundColor: Color(0xFF21262D),
-                                    backgroundImage: NetworkImage(
-                                      'https://i.pravatar.cc/150?img=3',
+                                    backgroundColor: const Color(0xFF21262D),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        gradient: LinearGradient(
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                          colors: [
+                                            const Color(0xFF58A6FF),
+                                            const Color(0xFF58A6FF).withValues(alpha: 0.7),
+                                          ],
+                                        ),
+                                      ),
+                                      child: const Icon(
+                                        Icons.person,
+                                        color: Colors.white,
+                                        size: 24,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -201,36 +292,41 @@ class _HomePageState extends State<HomePage> {
                               fontWeight: FontWeight.bold,
                             ),
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF21262D),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: const Color(0xFF30363D),
-                          ),
-                        ),
-                        child: const Row(
-                          children: [
-                            HeroIcon(
-                              HeroIcons.squares2x2,
-                              style: HeroIconStyle.mini,
-                              color: Color(0xFF8B949E),
-                              size: 16,
+                      ValueListenableBuilder<List<SmartHomeOption>>(
+                        valueListenable: PanelService().iconosNotifier,
+                        builder: (context, iconosActivos, child) {
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
                             ),
-                            SizedBox(width: 6),
-                            Text(
-                              '5 módulos',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Color(0xFF8B949E),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF21262D),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: const Color(0xFF30363D),
                               ),
                             ),
-                          ],
-                        ),
+                            child: Row(
+                              children: [
+                                const HeroIcon(
+                                  HeroIcons.squares2x2,
+                                  style: HeroIconStyle.mini,
+                                  color: Color(0xFF8B949E),
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  '${iconosActivos.length} módulo${iconosActivos.length != 1 ? 's' : ''}',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF8B949E),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -239,40 +335,50 @@ class _HomePageState extends State<HomePage> {
               const SliverToBoxAdapter(
                 child: SizedBox(height: 16),
               ),
-              // Módulos - Fila superior (3 módulos)
+              // Módulos - Grid dinámico basado en PanelService
               SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: smartHomeOptions
-                        .take(3)
-                        .map((option) => Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 6),
-                              child: SmartHomeCardCompact(option: option),
-                            ))
-                        .toList(),
-                  ),
-                ),
-              ),
-              const SliverToBoxAdapter(
-                child: SizedBox(height: 12),
-              ),
-              // Módulos - Fila inferior (2 módulos centrados)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: smartHomeOptions
-                        .skip(3)
-                        .take(2)
-                        .map((option) => Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 6),
-                              child: SmartHomeCardCompact(option: option),
-                            ))
-                        .toList(),
-                  ),
+                child: ValueListenableBuilder<List<SmartHomeOption>>(
+                  valueListenable: PanelService().iconosNotifier,
+                  builder: (context, iconosActivos, child) {
+                    // Dividir en filas: 3 en la primera, resto en la segunda
+                    final primeraFila = iconosActivos.take(3).toList();
+                    final segundaFila = iconosActivos.skip(3).toList();
+                    
+                    return Column(
+                      children: [
+                        // Fila superior
+                        if (primeraFila.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: primeraFila
+                                  .map((option) => Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6),
+                                        child: SmartHomeCardCompact(option: option),
+                                      ))
+                                  .toList(),
+                            ),
+                          ),
+                        if (primeraFila.isNotEmpty && segundaFila.isNotEmpty)
+                          const SizedBox(height: 12),
+                        // Fila inferior
+                        if (segundaFila.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: segundaFila
+                                  .map((option) => Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6),
+                                        child: SmartHomeCardCompact(option: option),
+                                      ))
+                                  .toList(),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
                 ),
               ),
               const SliverToBoxAdapter(
@@ -532,13 +638,53 @@ class _HomePageState extends State<HomePage> {
     required int index,
   }) {
     final isSelected = _selectedIndex == index;
-    final color = isSelected ? const Color(0xFF58A6FF) : const Color(0xFF8B949E);
+    final isAlertas = index == 2;
+    final tieneAlertas = _totalAlertas > 0;
+    
+    // Color para el icono de alertas: rojo parpadeante si hay alertas, normal si no
+    Color iconColor;
+    if (isAlertas && tieneAlertas && !isSelected) {
+      // Usar AnimatedBuilder para el parpadeo
+      return AnimatedBuilder(
+        animation: _alertBlinkAnimation,
+        builder: (context, child) {
+          // Parpadeo entre rojo intenso y rojo más claro para mayor visibilidad
+          iconColor = Color.lerp(
+            const Color(0xFFF85149), // Rojo intenso
+            const Color(0xFFFF6B6B), // Rojo más claro
+            _alertBlinkAnimation.value,
+          )!;
+          return _buildNavItemContent(icon, label, index, isSelected, iconColor);
+        },
+      );
+    } else {
+      iconColor = isSelected ? const Color(0xFF58A6FF) : const Color(0xFF8B949E);
+      return _buildNavItemContent(icon, label, index, isSelected, iconColor);
+    }
+  }
 
+  Widget _buildNavItemContent(
+    HeroIcons icon,
+    String label,
+    int index,
+    bool isSelected,
+    Color color,
+  ) {
     return GestureDetector(
       onTap: () {
         setState(() {
           _selectedIndex = index;
         });
+        // Navegar según el índice
+        if (index == 0) {
+          // Ya estamos en home
+        } else if (index == 1) {
+          context.push('/panel');
+        } else if (index == 2) {
+          context.push('/alertas');
+        } else if (index == 3) {
+          context.push('/ajustes');
+        }
       },
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(

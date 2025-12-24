@@ -874,8 +874,15 @@ class _LucesPageState extends State<LucesPage> {
         setState(() {
           _selectedNavIndex = index;
         });
+        // Navegar según el índice
         if (index == 0) {
           context.go('/');
+        } else if (index == 1) {
+          context.push('/panel');
+        } else if (index == 2) {
+          context.push('/alertas');
+        } else if (index == 3) {
+          context.push('/ajustes');
         }
       },
       behavior: HitTestBehavior.opaque,

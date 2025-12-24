@@ -11,25 +11,6 @@ class CentroMandoPage extends StatefulWidget {
 }
 
 class _CentroMandoPageState extends State<CentroMandoPage> {
-  final DraggableScrollableController _sheetController = DraggableScrollableController();
-  static const double _initialSize = 0.38;
-  bool _isDragging = false;
-
-  @override
-  void dispose() {
-    _sheetController.dispose();
-    super.dispose();
-  }
-
-  void _resetSheetPosition() {
-    if (_sheetController.isAttached && _sheetController.size != _initialSize) {
-      _sheetController.animateTo(
-        _initialSize,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,277 +28,205 @@ class _CentroMandoPageState extends State<CentroMandoPage> {
             ],
           ),
         ),
-        child: Stack(
-          children: [
-            // Contenido principal (fijo, sin scroll)
-            SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // AppBar personalizado
+                Row(
                   children: [
-                    // AppBar personalizado
-                    Row(
-                      children: [
-                        GestureDetector(
-                          onTap: () => context.pop(),
-                          child: Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF21262D),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: const Color(0xFF30363D),
-                              ),
-                            ),
-                            child: const HeroIcon(
-                              HeroIcons.arrowLeft,
-                              style: HeroIconStyle.outline,
-                              color: Colors.white,
-                              size: 20,
-                            ),
+                    GestureDetector(
+                      onTap: () => context.pop(),
+                      child: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF21262D),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: const Color(0xFF30363D),
                           ),
                         ),
-                        const SizedBox(width: 16),
-                        const Expanded(
-                          child: Text(
-                            'Centro de Mando',
+                        child: const HeroIcon(
+                          HeroIcons.arrowLeft,
+                          style: HeroIconStyle.outline,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    const Expanded(
+                      child: Text(
+                        'Centro de Mando',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF238636).withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: const Color(0xFF238636).withValues(alpha: 0.5),
+                        ),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(
+                            Icons.circle,
+                            size: 8,
+                            color: Color(0xFF7EE787),
+                          ),
+                          SizedBox(width: 6),
+                          Text(
+                            'Activo',
                             style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF7EE787),
                             ),
                           ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF238636).withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: const Color(0xFF238636).withValues(alpha: 0.5),
-                            ),
-                          ),
-                          child: const Row(
-                            children: [
-                              Icon(
-                                Icons.circle,
-                                size: 8,
-                                color: Color(0xFF7EE787),
-                              ),
-                              SizedBox(width: 6),
-                              Text(
-                                'Activo',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF7EE787),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    
-                    const SizedBox(height: 12),
-                    
-                    // 3 KPI Cards apiladas verticalmente con altura fija
-                    // Card 1: Temperatura
-                    SizedBox(
-                      height: 125,
-                      child: _buildKpiCardHorizontal(
-                        icon: HeroIcons.fire,
-                        iconColor: const Color(0xFFFF6B6B),
-                        title: 'Temperatura General',
-                        value: '22°C',
-                        subtitle: 'Promedio del hogar',
+                        ],
                       ),
-                    ),
-                    
-                    const SizedBox(height: 10),
-                    
-                    // Card 2: Dispositivos Activos
-                    SizedBox(
-                      height: 125,
-                      child: _buildKpiCardHorizontal(
-                        icon: HeroIcons.cpuChip,
-                        iconColor: const Color(0xFF7EE787),
-                        title: 'Dispositivos Activos',
-                        value: '24/27',
-                        subtitle: 'Conectados ahora',
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 10),
-                    
-                    // Card 3: Consumo Energético con gráfico
-                    SizedBox(
-                      height: 125,
-                      child: _buildEnergyCard(),
                     ),
                   ],
                 ),
-              ),
-            ),
-            
-            // DraggableScrollableSheet para Alertas
-            Listener(
-              onPointerDown: (_) {
-                _isDragging = true;
-              },
-              onPointerUp: (_) {
-                _isDragging = false;
-                // Esperar un momento para que termine la animación de snap
-                Future.delayed(const Duration(milliseconds: 100), () {
-                  _resetSheetPosition();
-                });
-              },
-              child: DraggableScrollableSheet(
-                controller: _sheetController,
-                initialChildSize: _initialSize,
-                minChildSize: _initialSize,
-                maxChildSize: 0.85,
-                snap: true,
-                snapSizes: const [_initialSize, 0.85],
-                builder: (context, scrollController) {
-                return Container(
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF161B22),
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(24),
+                
+                const SizedBox(height: 12),
+                
+                // 3 KPI Cards apiladas verticalmente con altura fija
+                // Card 1: Temperatura
+                SizedBox(
+                  height: 125,
+                  child: _buildKpiCardHorizontal(
+                    icon: HeroIcons.fire,
+                    iconColor: const Color(0xFFFF6B6B),
+                    title: 'Temperatura General',
+                    value: '22°C',
+                    subtitle: 'Promedio del hogar',
+                  ),
+                ),
+                
+                const SizedBox(height: 10),
+                
+                // Card 2: Dispositivos Activos
+                SizedBox(
+                  height: 125,
+                  child: _buildKpiCardHorizontal(
+                    icon: HeroIcons.cpuChip,
+                    iconColor: const Color(0xFF7EE787),
+                    title: 'Dispositivos Activos',
+                    value: '24/27',
+                    subtitle: 'Conectados ahora',
+                  ),
+                ),
+                
+                const SizedBox(height: 10),
+                
+                // Card 3: Consumo Energético con gráfico
+                SizedBox(
+                  height: 125,
+                  child: _buildEnergyCard(),
+                ),
+                
+                const SizedBox(height: 20),
+                
+                // Header de alertas
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF85149).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const HeroIcon(
+                        HeroIcons.exclamationTriangle,
+                        style: HeroIconStyle.solid,
+                        color: Color(0xFFF85149),
+                        size: 16,
+                      ),
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black26,
-                        blurRadius: 20,
-                        offset: Offset(0, -5),
+                    const SizedBox(width: 10),
+                    const Text(
+                      'Alertas Importantes',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
                       ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      // Handle para arrastrar
-                      Container(
-                        margin: const EdgeInsets.only(top: 12),
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF30363D),
-                          borderRadius: BorderRadius.circular(2),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF85149),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Text(
+                        '5',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
                       ),
-                      
-                      // Header de alertas
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF85149).withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const HeroIcon(
-                                HeroIcons.exclamationTriangle,
-                                style: HeroIconStyle.solid,
-                                color: Color(0xFFF85149),
-                                size: 16,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            const Text(
-                              'Alertas Importantes',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF85149),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Text(
-                                '3',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                            const Spacer(),
-                            const HeroIcon(
-                              HeroIcons.chevronUp,
-                              style: HeroIconStyle.outline,
-                              color: Color(0xFF8B949E),
-                              size: 20,
-                            ),
-                          ],
-                        ),
-                      ),
-                      
-                      // Lista de alertas (scrollable)
-                      Expanded(
-                        child: ListView(
-                          controller: scrollController,
-                          padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-                          children: [
-                            _buildAlertItem(
-                              icon: HeroIcons.lockOpen,
-                              title: 'Puerta de entrada abierta',
-                              subtitle: 'Hace 5 minutos',
-                              severity: AlertSeverity.high,
-                            ),
-                            const SizedBox(height: 12),
-                            _buildAlertItem(
-                              icon: HeroIcons.videoCamera,
-                              title: 'Movimiento detectado en jardín',
-                              subtitle: 'Hace 15 minutos',
-                              severity: AlertSeverity.medium,
-                            ),
-                            const SizedBox(height: 12),
-                            _buildAlertItem(
-                              icon: HeroIcons.battery0,
-                              title: 'Sensor cocina batería baja',
-                              subtitle: 'Hace 1 hora',
-                              severity: AlertSeverity.low,
-                            ),
-                            const SizedBox(height: 12),
-                            _buildAlertItem(
-                              icon: HeroIcons.wifi,
-                              title: 'Cámara garaje desconectada',
-                              subtitle: 'Hace 2 horas',
-                              severity: AlertSeverity.medium,
-                            ),
-                            const SizedBox(height: 12),
-                            _buildAlertItem(
-                              icon: HeroIcons.fire,
-                              title: 'Temperatura alta en ático',
-                              subtitle: 'Hace 3 horas',
-                              severity: AlertSeverity.low,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-                },
-              ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 12),
+                
+                // Cards de alertas apiladas
+                _buildAlertItem(
+                  icon: HeroIcons.lockOpen,
+                  title: 'Puerta de entrada abierta',
+                  subtitle: 'Hace 5 minutos',
+                  severity: AlertSeverity.high,
+                ),
+                const SizedBox(height: 12),
+                _buildAlertItem(
+                  icon: HeroIcons.videoCamera,
+                  title: 'Movimiento detectado en jardín',
+                  subtitle: 'Hace 15 minutos',
+                  severity: AlertSeverity.medium,
+                ),
+                const SizedBox(height: 12),
+                _buildAlertItem(
+                  icon: HeroIcons.battery0,
+                  title: 'Sensor cocina batería baja',
+                  subtitle: 'Hace 1 hora',
+                  severity: AlertSeverity.low,
+                ),
+                const SizedBox(height: 12),
+                _buildAlertItem(
+                  icon: HeroIcons.wifi,
+                  title: 'Cámara garaje desconectada',
+                  subtitle: 'Hace 2 horas',
+                  severity: AlertSeverity.medium,
+                ),
+                const SizedBox(height: 12),
+                _buildAlertItem(
+                  icon: HeroIcons.fire,
+                  title: 'Temperatura alta en ático',
+                  subtitle: 'Hace 3 horas',
+                  severity: AlertSeverity.low,
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

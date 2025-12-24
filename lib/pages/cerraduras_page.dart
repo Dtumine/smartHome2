@@ -223,6 +223,15 @@ class _CerradurasPageState extends State<CerradurasPage>
   int get _cerradurasCerradas => _cerraduras.where((c) => c.cerrada).length;
   int get _alertasBateria => _cerraduras.where((c) => c.bateria < 20).length;
   int get _desconectadas => _cerraduras.where((c) => !c.conectada).length;
+  
+  // Calcular total de alertas (sensores + cerraduras)
+  int get _totalAlertas {
+    // Alertas de sensores (simuladas - en producción vendrían de un provider)
+    final alertasSensores = 4; // Entrada, Baño Principal, Garage, Dormitorio 1
+    // Alertas de cerraduras
+    final alertasCerraduras = _cerradurasAbiertas + _alertasBateria + _desconectadas;
+    return alertasSensores + alertasCerraduras;
+  }
 
   @override
   void initState() {
@@ -239,9 +248,13 @@ class _CerradurasPageState extends State<CerradurasPage>
     _alertBlinkController = AnimationController(
       duration: const Duration(milliseconds: 1000),
       vsync: this,
-    )..repeat(reverse: true);
+    );
+    
+    if (_totalAlertas > 0) {
+      _alertBlinkController.repeat(reverse: true);
+    }
 
-    _alertBlinkAnimation = Tween<double>(begin: 0.3, end: 1.0).animate(
+    _alertBlinkAnimation = Tween<double>(begin: 0.4, end: 1.0).animate(
       CurvedAnimation(parent: _alertBlinkController, curve: Curves.easeInOut),
     );
 
@@ -2097,15 +2110,52 @@ class _CerradurasPageState extends State<CerradurasPage>
     required int index,
   }) {
     final isSelected = _selectedNavIndex == index;
-    final color = isSelected ? const Color(0xFF58A6FF) : const Color(0xFF8B949E);
+    final isAlertas = index == 2;
+    final tieneAlertas = _totalAlertas > 0;
+    
+    // Color para el icono de alertas: rojo parpadeante si hay alertas, normal si no
+    Color iconColor;
+    if (isAlertas && tieneAlertas && !isSelected) {
+      // Usar AnimatedBuilder para el parpadeo
+      return AnimatedBuilder(
+        animation: _alertBlinkAnimation,
+        builder: (context, child) {
+          // Parpadeo entre rojo intenso y rojo más claro para mayor visibilidad
+          iconColor = Color.lerp(
+            const Color(0xFFF85149), // Rojo intenso
+            const Color(0xFFFF6B6B), // Rojo más claro
+            _alertBlinkAnimation.value,
+          )!;
+          return _buildNavItemContent(icon, label, index, isSelected, iconColor);
+        },
+      );
+    } else {
+      iconColor = isSelected ? const Color(0xFF58A6FF) : const Color(0xFF8B949E);
+      return _buildNavItemContent(icon, label, index, isSelected, iconColor);
+    }
+  }
 
+  Widget _buildNavItemContent(
+    HeroIcons icon,
+    String label,
+    int index,
+    bool isSelected,
+    Color color,
+  ) {
     return GestureDetector(
       onTap: () {
         setState(() {
           _selectedNavIndex = index;
         });
+        // Navegar según el índice
         if (index == 0) {
           context.go('/');
+        } else if (index == 1) {
+          context.push('/panel');
+        } else if (index == 2) {
+          context.push('/alertas');
+        } else if (index == 3) {
+          context.push('/ajustes');
         }
       },
       behavior: HitTestBehavior.opaque,

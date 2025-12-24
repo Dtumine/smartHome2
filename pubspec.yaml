@@ -14,11 +14,25 @@ dependencies:
   heroicons: ^0.11.0
   fl_chart: ^0.69.0
   material_symbols_icons: ^4.2800.1
+  google_fonts: ^6.2.1
 
 dev_dependencies:
   flutter_lints: ^5.0.0
   flutter_test:
     sdk: flutter
+  flutter_launcher_icons: ^0.13.1
 
 flutter:
   uses-material-design: true
+  
+  # Assets
+  assets:
+    - assets/images/
+
+# Configuración de íconos de la app
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/images/logo.png"
+  adaptive_icon_background: "#0D1117"
+  adaptive_icon_foreground: "assets/images/logo.png"
