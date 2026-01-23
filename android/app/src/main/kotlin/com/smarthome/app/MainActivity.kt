@@ -1,5 +1,6 @@
-package com.example.proyecto_tp3
+package com.smarthome.app
 
 import io.flutter.embedding.android.FlutterActivity
 
 class MainActivity : FlutterActivity()
+

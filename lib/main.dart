@@ -14,6 +14,10 @@ import 'pages/cerraduras_page.dart';
 import 'pages/alertas_page.dart';
 import 'pages/ajustes_page.dart';
 import 'pages/panel_page.dart';
+import 'pages/riego_page.dart';
+import 'pages/cortinas_page.dart';
+import 'pages/alarmas_page.dart';
+import 'pages/ventilacion_page.dart';
 import 'theme/app_colors.dart';
 
 void main() {
@@ -188,6 +192,22 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/alertas',
       builder: (context, state) => const AlertasPage(),
+    ),
+    GoRoute(
+      path: '/riego',
+      builder: (context, state) => const RiegoPage(),
+    ),
+    GoRoute(
+      path: '/cortinas',
+      builder: (context, state) => const CortinasPage(),
+    ),
+    GoRoute(
+      path: '/alarmas',
+      builder: (context, state) => const AlarmasPage(),
+    ),
+    GoRoute(
+      path: '/ventilacion',
+      builder: (context, state) => const VentilacionPage(),
     ),
   ],
 );

@@ -48,10 +48,10 @@ class _TermostatoPageState extends State<TermostatoPage>
   static const double _accelerationRate = 0.5; // Factor de aceleración (menor = más rápido) (reducido de 0.7)
 
   // Límites de temperatura por modo
-  static const double _tempMinFrio = 16.0;
+  static const double _tempMinFrio = 5.0;
   static const double _tempMaxFrio = 26.0;
-  static const double _tempMinCalor = 18.0;
-  static const double _tempMaxCalor = 28.0;
+  static const double _tempMinCalor = 26.0;
+  static const double _tempMaxCalor = 42.0;
   static const double _tempMinAuto = 16.0;
   static const double _tempMaxAuto = 30.0;
 
@@ -285,8 +285,16 @@ class _TermostatoPageState extends State<TermostatoPage>
         _zonaActual.tempMaxAuto = _zonaActual.tempMinAuto + diferencia;
         _zonaActual.tempObjetivo = (_zonaActual.tempMinAuto + _zonaActual.tempMaxAuto) / 2;
       } else {
-        _zonas[_zonaSeleccionada].tempObjetivo =
-            (_zonas[_zonaSeleccionada].tempObjetivo + delta).clamp(_tempMin, _tempMax);
+        // Modo Frío o Calor
+        double nuevaTemp = _zonas[_zonaSeleccionada].tempObjetivo + delta;
+        
+        // Si estamos en modo Frío y se supera el límite, cambiar a Calor
+        if (_modoSeleccionado == 1 && nuevaTemp > _tempMaxFrio) {
+          _modoSeleccionado = 2; // Cambiar a modo Calor
+          _zonas[_zonaSeleccionada].tempObjetivo = nuevaTemp.clamp(_tempMinCalor, _tempMaxCalor);
+        } else {
+          _zonas[_zonaSeleccionada].tempObjetivo = nuevaTemp.clamp(_tempMin, _tempMax);
+        }
       }
       
       if (_modoSeleccionado == 0) {
@@ -338,7 +346,14 @@ class _TermostatoPageState extends State<TermostatoPage>
         _zonaActual.tempMaxAuto = (temp + rangoMitad).clamp(_tempMinAuto + 2, _tempMaxAuto);
         _zonaActual.tempObjetivo = temp.clamp(_zonaActual.tempMinAuto, _zonaActual.tempMaxAuto);
       } else {
-        _zonas[_zonaSeleccionada].tempObjetivo = temp.clamp(_tempMin, _tempMax);
+        // Modo Frío o Calor
+        // Si estamos en modo Frío y se supera el límite, cambiar a Calor
+        if (_modoSeleccionado == 1 && temp > _tempMaxFrio) {
+          _modoSeleccionado = 2; // Cambiar a modo Calor
+          _zonas[_zonaSeleccionada].tempObjetivo = temp.clamp(_tempMinCalor, _tempMaxCalor);
+        } else {
+          _zonas[_zonaSeleccionada].tempObjetivo = temp.clamp(_tempMin, _tempMax);
+        }
       }
       
       if (_modoSeleccionado == 0) {
@@ -361,6 +376,7 @@ class _TermostatoPageState extends State<TermostatoPage>
         // Ajustar temperatura objetivo según el nuevo modo
         switch (nuevoModo) {
           case 1: // Frío
+            // Si la temperatura está por encima del máximo de frío, ajustar al máximo
             if (_zonaActual.tempObjetivo > _tempMaxFrio) {
               _zonaActual.tempObjetivo = _tempMaxFrio;
             }
@@ -369,11 +385,12 @@ class _TermostatoPageState extends State<TermostatoPage>
             }
             break;
           case 2: // Calor
-            if (_zonaActual.tempObjetivo > _tempMaxCalor) {
-              _zonaActual.tempObjetivo = _tempMaxCalor;
-            }
+            // Si la temperatura está por debajo del mínimo de calor, ajustar al mínimo
             if (_zonaActual.tempObjetivo < _tempMinCalor) {
               _zonaActual.tempObjetivo = _tempMinCalor;
+            }
+            if (_zonaActual.tempObjetivo > _tempMaxCalor) {
+              _zonaActual.tempObjetivo = _tempMaxCalor;
             }
             break;
           case 3: // Auto - usar el rango predefinido de la zona

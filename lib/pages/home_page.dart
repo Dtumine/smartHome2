@@ -343,6 +343,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                     // Dividir en filas: 3 en la primera, resto en la segunda
                     final primeraFila = iconosActivos.take(3).toList();
                     final segundaFila = iconosActivos.skip(3).toList();
+                    final tieneMasDeSeis = iconosActivos.length > 6;
                     
                     return Column(
                       children: [
@@ -362,19 +363,34 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                           ),
                         if (primeraFila.isNotEmpty && segundaFila.isNotEmpty)
                           const SizedBox(height: 12),
-                        // Fila inferior
+                        // Fila inferior - con scroll si hay más de 6 módulos
                         if (segundaFila.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: segundaFila
-                                  .map((option) => Padding(
+                          SizedBox(
+                            height: 120, // Altura fija para mantener consistencia
+                            child: tieneMasDeSeis
+                                ? ListView.builder(
+                                    scrollDirection: Axis.horizontal,
+                                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                                    itemCount: segundaFila.length,
+                                    itemBuilder: (context, index) {
+                                      return Padding(
                                         padding: const EdgeInsets.symmetric(horizontal: 6),
-                                        child: SmartHomeCardCompact(option: option),
-                                      ))
-                                  .toList(),
-                            ),
+                                        child: SmartHomeCardCompact(option: segundaFila[index]),
+                                      );
+                                    },
+                                  )
+                                : Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: segundaFila
+                                          .map((option) => Padding(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6),
+                                                child: SmartHomeCardCompact(option: option),
+                                              ))
+                                          .toList(),
+                                    ),
+                                  ),
                           ),
                       ],
                     );
@@ -389,7 +405,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24.0),
                   child: Container(
-                    height: 190,
+                    height: 150,
                     decoration: BoxDecoration(
                       color: const Color(0xFF161B22),
                       borderRadius: BorderRadius.circular(20),
@@ -398,7 +414,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                       ),
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.all(16.0),
+                      padding: const EdgeInsets.all(12.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -411,13 +427,13 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                     HeroIcons.bolt,
                                     style: HeroIconStyle.solid,
                                     color: Color(0xFFFFD700),
-                                    size: 18,
+                                    size: 16,
                                   ),
-                                  SizedBox(width: 8),
+                                  SizedBox(width: 6),
                                   Text(
                                     'Consumo Semanal',
                                     style: TextStyle(
-                                      fontSize: 14,
+                                      fontSize: 13,
                                       fontWeight: FontWeight.w600,
                                       color: Colors.white,
                                     ),
@@ -426,8 +442,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                               ),
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
+                                  horizontal: 6,
+                                  vertical: 3,
                                 ),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFF7EE787).withValues(alpha: 0.15),
@@ -437,14 +453,14 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                   children: [
                                     Icon(
                                       Icons.arrow_downward_rounded,
-                                      size: 12,
+                                      size: 10,
                                       color: Color(0xFF7EE787),
                                     ),
-                                    SizedBox(width: 4),
+                                    SizedBox(width: 3),
                                     Text(
                                       '12%',
                                       style: TextStyle(
-                                        fontSize: 11,
+                                        fontSize: 10,
                                         fontWeight: FontWeight.w600,
                                         color: Color(0xFF7EE787),
                                       ),
@@ -454,7 +470,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                               ),
                             ],
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 10),
                           Expanded(
                             child: LineChart(
                               LineChartData(
@@ -483,7 +499,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                   bottomTitles: AxisTitles(
                                     sideTitles: SideTitles(
                                       showTitles: true,
-                                      reservedSize: 22,
+                                      reservedSize: 18,
                                       interval: 1,
                                       getTitlesWidget: (value, meta) {
                                         const days = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
@@ -492,7 +508,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                             days[value.toInt()],
                                             style: const TextStyle(
                                               color: Color(0xFF8B949E),
-                                              fontSize: 11,
+                                              fontSize: 10,
                                               fontWeight: FontWeight.w500,
                                             ),
                                           );
@@ -521,13 +537,13 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                     isCurved: true,
                                     curveSmoothness: 0.35,
                                     color: const Color(0xFF58A6FF),
-                                    barWidth: 3,
+                                    barWidth: 2.5,
                                     isStrokeCapRound: true,
                                     dotData: FlDotData(
                                       show: true,
                                       getDotPainter: (spot, percent, barData, index) {
                                         return FlDotCirclePainter(
-                                          radius: 4,
+                                          radius: 3,
                                           color: const Color(0xFF161B22),
                                           strokeWidth: 2,
                                           strokeColor: const Color(0xFF58A6FF),
@@ -575,7 +591,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                 ),
               ),
               const SliverToBoxAdapter(
-                child: SizedBox(height: 12),
+                child: SizedBox(height: 8),
               ),
             ],
           ),

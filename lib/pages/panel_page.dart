@@ -497,41 +497,48 @@ class _PanelPageState extends State<PanelPage> {
               ],
             ),
           ),
-          // Botón eliminar (solo en modo edición)
-          if (esVistaEdicion)
-            Positioned(
-              top: -4,
-              right: -4,
-              child: GestureDetector(
-                onTap: () {
+          // Botón eliminar (disponible en ambas vistas)
+          Positioned(
+            top: -4,
+            right: -4,
+            child: GestureDetector(
+              onTap: () {
+                if (esVistaEdicion) {
+                  // En modo edición, eliminar directamente
                   _eliminarIcono(index);
-                },
-                child: Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFF6B6B),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: AppColors.cardBackground,
-                      width: 2,
+                } else {
+                  // En vista normal, mostrar confirmación
+                  _mostrarConfirmacionEliminar(index, option.title);
+                }
+              },
+              child: Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: esVistaEdicion 
+                      ? const Color(0xFFFF6B6B)
+                      : const Color(0xFFFF6B6B).withValues(alpha: 0.7),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: AppColors.cardBackground,
+                    width: 2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.3),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.3),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.close,
-                    size: 14,
-                    color: Colors.white,
-                  ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.close,
+                  size: 14,
+                  color: Colors.white,
                 ),
               ),
             ),
+          ),
         ],
       ),
     );
@@ -542,6 +549,42 @@ class _PanelPageState extends State<PanelPage> {
       _panelService.eliminarIcono(index);
     });
     _mostrarSnackbar('Módulo eliminado del panel');
+  }
+
+  void _mostrarConfirmacionEliminar(int index, String nombreModulo) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.cardBackground,
+        title: const Text(
+          'Eliminar Módulo',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Text(
+          '¿Estás seguro de que quieres eliminar "$nombreModulo" del panel?',
+          style: const TextStyle(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text(
+              'Cancelar',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              _eliminarIcono(index);
+            },
+            child: const Text(
+              'Eliminar',
+              style: TextStyle(color: Color(0xFFFF6B6B)),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _mostrarDialogoReordenar(int index) {
