@@ -1,16 +1,22 @@
+import 'dart:io';
+import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:heroicons/heroicons.dart';
 import '../theme/app_colors.dart';
+import '../providers/auth_provider.dart';
+import '../services/auth_service.dart';
 
-class AjustesPage extends StatefulWidget {
+class AjustesPage extends ConsumerStatefulWidget {
   const AjustesPage({super.key});
 
   @override
-  State<AjustesPage> createState() => _AjustesPageState();
+  ConsumerState<AjustesPage> createState() => _AjustesPageState();
 }
 
-class _AjustesPageState extends State<AjustesPage> {
+class _AjustesPageState extends ConsumerState<AjustesPage> {
   int _selectedNavIndex = 3; // Ajustes está seleccionado
 
   // Estado de las configuraciones
@@ -25,13 +31,21 @@ class _AjustesPageState extends State<AjustesPage> {
   String _idiomaSeleccionado = 'Español';
   String _temaSeleccionado = 'Automático';
 
-  // Datos del usuario
-  final String _nombreUsuario = 'Juan Pérez';
-  final String _emailUsuario = 'juan.perez@email.com';
-  final String _avatarInicial = 'JP';
-
   @override
   Widget build(BuildContext context) {
+    // Obtener datos del usuario desde el provider
+    final userEmailAsync = ref.watch(userEmailProvider);
+    final userNameAsync = ref.watch(userNameProvider);
+    final userFullNameAsync = ref.watch(userFullNameProvider);
+    final userPhotoPathAsync = ref.watch(userPhotoPathProvider);
+    
+    final emailUsuario = userEmailAsync.value ?? 'usuario@email.com';
+    final nombreCompleto = userFullNameAsync.value;
+    final nombreUsuario = nombreCompleto ?? userNameAsync.value ?? 'Usuario';
+    final avatarInicial = nombreUsuario.isNotEmpty 
+        ? nombreUsuario.substring(0, 1).toUpperCase() 
+        : 'U';
+    final fotoPath = userPhotoPathAsync.value;
     return Scaffold(
       backgroundColor: AppColors.backgroundPrimary,
       body: Container(
@@ -88,7 +102,7 @@ class _AjustesPageState extends State<AjustesPage> {
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   children: [
                     // Perfil de usuario
-                    _buildPerfilCard(),
+                    _buildPerfilCard(emailUsuario, nombreUsuario, avatarInicial, fotoPath),
                     const SizedBox(height: 20),
 
                     // Notificaciones
@@ -257,7 +271,7 @@ class _AjustesPageState extends State<AjustesPage> {
     );
   }
 
-  Widget _buildPerfilCard() {
+  Widget _buildPerfilCard(String emailUsuario, String nombreUsuario, String avatarInicial, String? fotoPath) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -281,14 +295,16 @@ class _AjustesPageState extends State<AjustesPage> {
             width: 64,
             height: 64,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF58A6FF),
-                  Color(0xFF0077B6),
-                ],
-              ),
+              gradient: fotoPath == null || fotoPath.isEmpty
+                  ? const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color(0xFF58A6FF),
+                        Color(0xFF0077B6),
+                      ],
+                    )
+                  : null,
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
@@ -298,16 +314,60 @@ class _AjustesPageState extends State<AjustesPage> {
                 ),
               ],
             ),
-            child: Center(
-              child: Text(
-                _avatarInicial,
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ),
+            child: fotoPath != null && fotoPath.isNotEmpty
+                ? fotoPath == 'web_image'
+                    ? FutureBuilder<String?>(
+                        future: ref.read(authServiceProvider).getUserPhotoBase64(),
+                        builder: (context, snapshot) {
+                          if (snapshot.hasData && snapshot.data != null && snapshot.data!.isNotEmpty) {
+                            return ClipRRect(
+                              borderRadius: BorderRadius.circular(16),
+                              child: Image.memory(
+                                base64Decode(snapshot.data!),
+                                fit: BoxFit.cover,
+                              ),
+                            );
+                          }
+                          return Center(
+                            child: Text(
+                              avatarInicial,
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          );
+                        },
+                      )
+                    : File(fotoPath).existsSync()
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: Image.file(
+                              File(fotoPath),
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                        : Center(
+                            child: Text(
+                              avatarInicial,
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          )
+                : Center(
+                    child: Text(
+                      avatarInicial,
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
           ),
           const SizedBox(width: 16),
           // Información
@@ -316,7 +376,7 @@ class _AjustesPageState extends State<AjustesPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _nombreUsuario,
+                  nombreUsuario,
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -325,7 +385,7 @@ class _AjustesPageState extends State<AjustesPage> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  _emailUsuario,
+                  emailUsuario,
                   style: TextStyle(
                     fontSize: 14,
                     color: AppColors.textSecondary,
@@ -734,26 +794,7 @@ class _AjustesPageState extends State<AjustesPage> {
   // Diálogos y acciones
   void _mostrarDialogoEditarPerfil() {
     if (!mounted) return;
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppColors.cardBackground,
-        title: const Text(
-          'Editar Perfil',
-          style: TextStyle(color: Colors.white),
-        ),
-        content: const Text(
-          'Funcionalidad de edición de perfil próximamente disponible.',
-          style: TextStyle(color: AppColors.textSecondary),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cerrar'),
-          ),
-        ],
-      ),
-    );
+    context.push('/perfil');
   }
 
   void _mostrarDialogoCambioContrasena() {
@@ -896,10 +937,17 @@ class _AjustesPageState extends State<AjustesPage> {
             child: const Text('Cancelar'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.of(dialogContext).pop();
+              if (!mounted) return;
+              
+              // Cerrar sesión usando el provider
+              final authNotifier = ref.read(authStateProvider.notifier);
+              await authNotifier.logout();
+              
               if (mounted) {
-                _mostrarSnackbar('Sesión cerrada');
+                // Redirigir a la página de login
+                context.go('/login');
               }
             },
             child: const Text(

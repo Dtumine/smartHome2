@@ -268,9 +268,11 @@ class _CamarasPageState extends State<CamarasPage> {
 
     return GestureDetector(
       onTap: () {
-        setState(() {
-          _selectedNavIndex = index;
-        });
+        if (mounted) {
+          setState(() {
+            _selectedNavIndex = index;
+          });
+        }
         // Navegar según el índice
         if (index == 0) {
           context.go('/');
@@ -643,9 +645,11 @@ class _CamarasPageState extends State<CamarasPage> {
           ElevatedButton.icon(
             onPressed: () {
               // Intentar reconectar
-              setState(() {
-                _camaras[_camaraSeleccionada].enLinea = true;
-              });
+              if (mounted) {
+                setState(() {
+                  _camaras[_camaraSeleccionada].enLinea = true;
+                });
+              }
             },
             icon: const Icon(Icons.refresh, size: 18),
             label: const Text('Reintentar'),
@@ -716,10 +720,12 @@ class _CamarasPageState extends State<CamarasPage> {
             color: const Color(0xFFF85149),
             activo: _camaraActual.grabando,
             onTap: () {
-              setState(() {
-                _camaras[_camaraSeleccionada].grabando = 
-                    !_camaras[_camaraSeleccionada].grabando;
-              });
+              if (mounted) {
+                setState(() {
+                  _camaras[_camaraSeleccionada].grabando = 
+                      !_camaras[_camaraSeleccionada].grabando;
+                });
+              }
             },
           ),
           _buildBotonControl(
@@ -908,9 +914,11 @@ class _CamarasPageState extends State<CamarasPage> {
 
     return GestureDetector(
       onTap: () {
-        setState(() {
-          _camaraSeleccionada = index;
-        });
+        if (mounted) {
+          setState(() {
+            _camaraSeleccionada = index;
+          });
+        }
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),

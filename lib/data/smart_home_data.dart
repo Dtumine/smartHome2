@@ -44,5 +44,13 @@ final List<SmartHomeOption> smartHomeOptions = [
     gradientEnd: const Color(0xFF7C3AED),
     route: '/cerraduras',
   ),
+  SmartHomeOption(
+    title: 'Riego',
+    subtitle: '3 zonas',
+    materialIcon: Symbols.water_drop,
+    color: const Color(0xFF00CED1),
+    gradientEnd: const Color(0xFF008B8B),
+    route: '/riego',
+  ),
 ];
 

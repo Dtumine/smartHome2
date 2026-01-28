@@ -1,4 +1,8 @@
+import 'dart:io';
+import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:heroicons/heroicons.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -7,15 +11,17 @@ import '../models/smart_home_option.dart';
 import '../services/panel_service.dart';
 import '../widgets/smart_home_card_compact.dart';
 import '../theme/app_colors.dart';
+import '../providers/auth_provider.dart';
+import '../services/auth_service.dart';
 
-class HomePage extends StatefulWidget {
+class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  ConsumerState<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin {
+class _HomePageState extends ConsumerState<HomePage> with SingleTickerProviderStateMixin {
   int _selectedIndex = 0;
   
   // Animación de parpadeo para alertas
@@ -156,44 +162,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                               const SizedBox(width: 10),
                               GestureDetector(
                                 onTap: () => context.push('/ajustes'),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: const Color(0xFF58A6FF),
-                                      width: 2,
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: const Color(0xFF58A6FF).withValues(alpha: 0.3),
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 3),
-                                      ),
-                                    ],
-                                  ),
-                                  child: CircleAvatar(
-                                    radius: 20,
-                                    backgroundColor: const Color(0xFF21262D),
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        gradient: LinearGradient(
-                                          begin: Alignment.topLeft,
-                                          end: Alignment.bottomRight,
-                                          colors: [
-                                            const Color(0xFF58A6FF),
-                                            const Color(0xFF58A6FF).withValues(alpha: 0.7),
-                                          ],
-                                        ),
-                                      ),
-                                      child: const Icon(
-                                        Icons.person,
-                                        color: Colors.white,
-                                        size: 24,
-                                      ),
-                                    ),
-                                  ),
-                                ),
+                                child: _buildAvatarPerfil(),
                               ),
                             ],
                           ),
@@ -349,17 +318,50 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                       children: [
                         // Fila superior
                         if (primeraFila.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: primeraFila
-                                  .map((option) => Padding(
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              // Calcular si las tarjetas caben sin overflow
+                              final anchoTarjeta = 90.0;
+                              final paddingEntreTarjetas = 12.0; // 6 a cada lado
+                              final paddingLateral = 48.0; // 24 a cada lado
+                              final anchoTotalNecesario = (primeraFila.length * anchoTarjeta) +
+                                  ((primeraFila.length - 1) * paddingEntreTarjetas) +
+                                  paddingLateral;
+                              
+                              final necesitaScroll = anchoTotalNecesario > constraints.maxWidth;
+                              
+                              if (necesitaScroll) {
+                                // Usar scroll horizontal si no caben
+                                return SizedBox(
+                                  height: 120,
+                                  child: ListView.builder(
+                                    scrollDirection: Axis.horizontal,
+                                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                                    itemCount: primeraFila.length,
+                                    itemBuilder: (context, index) {
+                                      return Padding(
                                         padding: const EdgeInsets.symmetric(horizontal: 6),
-                                        child: SmartHomeCardCompact(option: option),
-                                      ))
-                                  .toList(),
-                            ),
+                                        child: SmartHomeCardCompact(option: primeraFila[index]),
+                                      );
+                                    },
+                                  ),
+                                );
+                              } else {
+                                // Usar Row normal si caben
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: primeraFila
+                                        .map((option) => Padding(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6),
+                                              child: SmartHomeCardCompact(option: option),
+                                            ))
+                                        .toList(),
+                                  ),
+                                );
+                              }
+                            },
                           ),
                         if (primeraFila.isNotEmpty && segundaFila.isNotEmpty)
                           const SizedBox(height: 12),
@@ -379,17 +381,47 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                       );
                                     },
                                   )
-                                : Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: segundaFila
-                                          .map((option) => Padding(
-                                                padding: const EdgeInsets.symmetric(horizontal: 6),
-                                                child: SmartHomeCardCompact(option: option),
-                                              ))
-                                          .toList(),
-                                    ),
+                                : LayoutBuilder(
+                                    builder: (context, constraints) {
+                                      // Calcular si las tarjetas caben sin overflow
+                                      final anchoTarjeta = 90.0;
+                                      final paddingEntreTarjetas = 12.0; // 6 a cada lado
+                                      final paddingLateral = 48.0; // 24 a cada lado
+                                      final anchoTotalNecesario = (segundaFila.length * anchoTarjeta) +
+                                          ((segundaFila.length - 1) * paddingEntreTarjetas) +
+                                          paddingLateral;
+                                      
+                                      final necesitaScroll = anchoTotalNecesario > constraints.maxWidth;
+                                      
+                                      if (necesitaScroll) {
+                                        // Usar scroll horizontal si no caben
+                                        return ListView.builder(
+                                          scrollDirection: Axis.horizontal,
+                                          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                                          itemCount: segundaFila.length,
+                                          itemBuilder: (context, index) {
+                                            return Padding(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6),
+                                              child: SmartHomeCardCompact(option: segundaFila[index]),
+                                            );
+                                          },
+                                        );
+                                      } else {
+                                        // Usar Row normal si caben
+                                        return Padding(
+                                          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: segundaFila
+                                                .map((option) => Padding(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                                                      child: SmartHomeCardCompact(option: option),
+                                                    ))
+                                                .toList(),
+                                          ),
+                                        );
+                                      }
+                                    },
                                   ),
                           ),
                       ],
@@ -644,6 +676,137 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildAvatarPerfil() {
+    // Obtener datos del usuario desde los providers
+    final userEmailAsync = ref.watch(userEmailProvider);
+    final userNameAsync = ref.watch(userNameProvider);
+    final userFullNameAsync = ref.watch(userFullNameProvider);
+    final userPhotoPathAsync = ref.watch(userPhotoPathProvider);
+    
+    final nombreCompleto = userFullNameAsync.value;
+    final nombreUsuario = nombreCompleto ?? userNameAsync.value ?? 'Usuario';
+    final avatarInicial = nombreUsuario.isNotEmpty 
+        ? nombreUsuario.substring(0, 1).toUpperCase() 
+        : 'U';
+    final fotoPath = userPhotoPathAsync.value;
+    
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: const Color(0xFF58A6FF),
+          width: 2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF58A6FF).withValues(alpha: 0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: CircleAvatar(
+        radius: 20,
+        backgroundColor: const Color(0xFF21262D),
+        child: fotoPath != null && fotoPath.isNotEmpty
+            ? fotoPath == 'web_image'
+                ? FutureBuilder<String?>(
+                    future: AuthService().getUserPhotoBase64(),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasData && snapshot.data != null && snapshot.data!.isNotEmpty) {
+                        return ClipOval(
+                          child: Image.memory(
+                            base64Decode(snapshot.data!),
+                            fit: BoxFit.cover,
+                            width: 40,
+                            height: 40,
+                          ),
+                        );
+                      }
+                      return Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              const Color(0xFF58A6FF),
+                              const Color(0xFF58A6FF).withValues(alpha: 0.7),
+                            ],
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            avatarInicial,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  )
+                : !kIsWeb && File(fotoPath).existsSync()
+                    ? ClipOval(
+                        child: Image.file(
+                          File(fotoPath),
+                          fit: BoxFit.cover,
+                          width: 40,
+                          height: 40,
+                        ),
+                      )
+                    : Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              const Color(0xFF58A6FF),
+                              const Color(0xFF58A6FF).withValues(alpha: 0.7),
+                            ],
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            avatarInicial,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      )
+            : Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      const Color(0xFF58A6FF),
+                      const Color(0xFF58A6FF).withValues(alpha: 0.7),
+                    ],
+                  ),
+                ),
+                child: Center(
+                  child: Text(
+                    avatarInicial,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
       ),
     );
   }

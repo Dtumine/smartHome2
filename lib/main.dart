@@ -15,13 +15,63 @@ import 'pages/alertas_page.dart';
 import 'pages/ajustes_page.dart';
 import 'pages/panel_page.dart';
 import 'pages/riego_page.dart';
+import 'pages/programar_riego_page.dart';
 import 'pages/cortinas_page.dart';
 import 'pages/alarmas_page.dart';
 import 'pages/ventilacion_page.dart';
+import 'pages/login_page.dart';
+import 'pages/perfil_page.dart';
+import 'providers/auth_provider.dart';
+import 'services/auth_service.dart';
 import 'theme/app_colors.dart';
 
 void main() {
   runApp(const ProviderScope(child: SmartHomeApp()));
+}
+
+/// Widget wrapper que verifica la autenticación antes de mostrar el contenido
+class AuthWrapper extends StatelessWidget {
+  final Widget child;
+
+  const AuthWrapper({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<bool>(
+      future: AuthService().isLoggedIn(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Scaffold(
+            backgroundColor: AppColors.backgroundPrimary,
+            body: Container(
+              decoration: const BoxDecoration(
+                gradient: AppColors.celestialBlueGradient,
+              ),
+              child: const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    Color(0xFF58A6FF),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+
+        final isLoggedIn = snapshot.data ?? false;
+        
+        if (!isLoggedIn) {
+          // Redirigir a login después de que el frame se construya
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            context.go('/login');
+          });
+          return const SizedBox.shrink();
+        }
+
+        return child;
+      },
+    );
+  }
 }
 
 class SmartHomeApp extends StatelessWidget {
@@ -148,66 +198,97 @@ class SmartHomeApp extends StatelessWidget {
 // Configuración del router
 final GoRouter _router = GoRouter(
   initialLocation: '/',
+  redirect: (context, state) async {
+    final isLoggedIn = await AuthService().isLoggedIn();
+    final isGoingToLogin = state.matchedLocation == '/login';
+    
+    // Si no está autenticado y no va a login, redirigir a login
+    if (!isLoggedIn && !isGoingToLogin) {
+      return '/login';
+    }
+    // Si está autenticado y va a login, redirigir a home
+    if (isLoggedIn && isGoingToLogin) {
+      return '/';
+    }
+    return null;
+  },
   routes: [
     GoRoute(
+      path: '/login',
+      builder: (context, state) => const LoginPage(),
+    ),
+    GoRoute(
       path: '/',
-      builder: (context, state) => const HomePage(),
+      builder: (context, state) => const AuthWrapper(child: HomePage()),
     ),
     GoRoute(
       path: '/luces',
-      builder: (context, state) => const LucesPage(),
+      builder: (context, state) => const AuthWrapper(child: LucesPage()),
     ),
     GoRoute(
       path: '/camaras',
-      builder: (context, state) => const CamarasPage(),
+      builder: (context, state) => const AuthWrapper(child: CamarasPage()),
     ),
     GoRoute(
       path: '/sensores',
-      builder: (context, state) => const SensoresPage(),
+      builder: (context, state) => const AuthWrapper(child: SensoresPage()),
     ),
     GoRoute(
       path: '/termostato',
-      builder: (context, state) => const TermostatoPage(),
+      builder: (context, state) => const AuthWrapper(child: TermostatoPage()),
     ),
     GoRoute(
       path: '/cerraduras',
-      builder: (context, state) => const CerradurasPage(),
+      builder: (context, state) => const AuthWrapper(child: CerradurasPage()),
     ),
     GoRoute(
       path: '/perfil',
-      builder: (context, state) => const AjustesPage(),
+      builder: (context, state) => const AuthWrapper(child: PerfilPage()),
     ),
     GoRoute(
       path: '/ajustes',
-      builder: (context, state) => const AjustesPage(),
+      builder: (context, state) => const AuthWrapper(child: AjustesPage()),
     ),
     GoRoute(
       path: '/centro-mando',
-      builder: (context, state) => const CentroMandoPage(),
+      builder: (context, state) => const AuthWrapper(child: CentroMandoPage()),
     ),
     GoRoute(
       path: '/panel',
-      builder: (context, state) => const PanelPage(),
+      builder: (context, state) => const AuthWrapper(child: PanelPage()),
     ),
     GoRoute(
       path: '/alertas',
-      builder: (context, state) => const AlertasPage(),
+      builder: (context, state) => const AuthWrapper(child: AlertasPage()),
     ),
     GoRoute(
       path: '/riego',
-      builder: (context, state) => const RiegoPage(),
+      builder: (context, state) => const AuthWrapper(child: RiegoPage()),
+    ),
+    GoRoute(
+      path: '/programar-riego',
+      builder: (context, state) {
+        final zonaNombre = state.uri.queryParameters['zona'];
+        final zonaIndex = state.uri.queryParameters['index'];
+        return AuthWrapper(
+          child: ProgramarRiegoPage(
+            zonaNombre: zonaNombre,
+            zonaIndex: zonaIndex != null ? int.tryParse(zonaIndex) : null,
+          ),
+        );
+      },
     ),
     GoRoute(
       path: '/cortinas',
-      builder: (context, state) => const CortinasPage(),
+      builder: (context, state) => const AuthWrapper(child: CortinasPage()),
     ),
     GoRoute(
       path: '/alarmas',
-      builder: (context, state) => const AlarmasPage(),
+      builder: (context, state) => const AuthWrapper(child: AlarmasPage()),
     ),
     GoRoute(
       path: '/ventilacion',
-      builder: (context, state) => const VentilacionPage(),
+      builder: (context, state) => const AuthWrapper(child: VentilacionPage()),
     ),
   ],
 );

@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:heroicons/heroicons.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import '../theme/app_colors.dart';
+import '../services/riego_service.dart';
 
 class RiegoPage extends StatefulWidget {
   const RiegoPage({super.key});
@@ -15,7 +16,7 @@ class _RiegoPageState extends State<RiegoPage> {
   int _selectedNavIndex = 0;
 
   // Zonas de riego
-  final List<ZonaRiego> _zonas = [
+  List<ZonaRiego> _zonas = [
     ZonaRiego(
       nombre: 'Jardín Frontal',
       icono: HeroIcons.home,
@@ -69,6 +70,30 @@ class _RiegoPageState extends State<RiegoPage> {
   ];
 
   ZonaRiego get _zonaSeleccionada => _zonas[0];
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarProgramacionesGuardadas();
+  }
+
+  Future<void> _cargarProgramacionesGuardadas() async {
+    final riegoService = RiegoService();
+    
+    for (int i = 0; i < _zonas.length; i++) {
+      final programacion = await riegoService.obtenerProgramacion(_zonas[i].nombre);
+      if (programacion != null) {
+        setState(() {
+          _zonas[i].proximoRiego = programacion.hora;
+          _zonas[i].duracionProgramada = programacion.duracion;
+          // Si hay programación guardada y la zona está activa, cambiar estado a programado
+          if (_zonas[i].activa && _zonas[i].estado == EstadoRiego.inactivo) {
+            _zonas[i].estado = EstadoRiego.programado;
+          }
+        });
+      }
+    }
+  }
 
   // Estadísticas generales
   double get _consumoTotalDiario {
@@ -665,44 +690,12 @@ class _RiegoPageState extends State<RiegoPage> {
     });
   }
 
-  void _programarRiego(int index) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppColors.cardBackground,
-        title: const Text(
-          'Programar Riego',
-          style: TextStyle(color: Colors.white),
-        ),
-        content: Text(
-          'Selecciona la hora para programar el riego de "${_zonas[index].nombre}"',
-          style: const TextStyle(color: AppColors.textSecondary),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text(
-              'Cancelar',
-              style: TextStyle(color: AppColors.textSecondary),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(dialogContext).pop();
-              setState(() {
-                _zonas[index].estado = EstadoRiego.programado;
-                _zonas[index].proximoRiego = '08:00';
-              });
-              _mostrarSnackbar('Riego programado para ${_zonas[index].proximoRiego}');
-            },
-            child: const Text(
-              'Programar',
-              style: TextStyle(color: Color(0xFF58A6FF)),
-            ),
-          ),
-        ],
-      ),
+  void _programarRiego(int index) async {
+    await context.push(
+      '/programar-riego?zona=${Uri.encodeComponent(_zonas[index].nombre)}&index=$index',
     );
+    // Recargar programaciones después de volver de la página de programar
+    _cargarProgramacionesGuardadas();
   }
 
   void _mostrarDialogoConfiguracion() {
