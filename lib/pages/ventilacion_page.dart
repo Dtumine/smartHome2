@@ -207,13 +207,13 @@ class _VentilacionPageState extends State<VentilacionPage> {
                 color: AppColors.cardBackground,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: AppColors.cardBorder,
+                  color: const Color(0xFF58A6FF), // Color de calidad de aire "buena"
                 ),
               ),
               child: const HeroIcon(
                 HeroIcons.bolt,
                 style: HeroIconStyle.outline,
-                color: Colors.white,
+                color: Color(0xFF58A6FF), // Color de calidad de aire "buena"
                 size: 20,
               ),
             ),
@@ -447,26 +447,6 @@ class _VentilacionPageState extends State<VentilacionPage> {
                   ],
                 ),
               ),
-              // Indicador de batería
-              if (ventilador.conectado)
-                Column(
-                  children: [
-                    Icon(
-                      _getIconoBateria(ventilador.bateria),
-                      size: 16,
-                      color: _getColorBateria(ventilador.bateria),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${ventilador.bateria}%',
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: _getColorBateria(ventilador.bateria),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
             ],
           ),
 

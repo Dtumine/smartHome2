@@ -26,6 +26,7 @@ class _RiegoPageState extends State<RiegoPage> {
       proximoRiego: '08:00',
       consumoDiario: 12.5,
       activa: true,
+      tipoRiego: TipoRiego.medio,
     ),
     ZonaRiego(
       nombre: 'Jardín Trasero',
@@ -36,6 +37,7 @@ class _RiegoPageState extends State<RiegoPage> {
       proximoRiego: '08:30',
       consumoDiario: 10.2,
       activa: true,
+      tipoRiego: TipoRiego.suave,
     ),
     ZonaRiego(
       nombre: 'Huerto',
@@ -46,6 +48,7 @@ class _RiegoPageState extends State<RiegoPage> {
       proximoRiego: '09:00',
       consumoDiario: 8.5,
       activa: true,
+      tipoRiego: TipoRiego.fuerte,
     ),
     ZonaRiego(
       nombre: 'Macetas Terraza',
@@ -56,6 +59,7 @@ class _RiegoPageState extends State<RiegoPage> {
       proximoRiego: '07:30',
       consumoDiario: 5.8,
       activa: true,
+      tipoRiego: TipoRiego.suave,
     ),
     ZonaRiego(
       nombre: 'Césped Lateral',
@@ -66,6 +70,7 @@ class _RiegoPageState extends State<RiegoPage> {
       proximoRiego: '08:15',
       consumoDiario: 15.3,
       activa: false,
+      tipoRiego: TipoRiego.fuerte,
     ),
   ];
 
@@ -82,10 +87,11 @@ class _RiegoPageState extends State<RiegoPage> {
     
     for (int i = 0; i < _zonas.length; i++) {
       final programacion = await riegoService.obtenerProgramacion(_zonas[i].nombre);
-      if (programacion != null) {
+      if (programacion != null && mounted) {
         setState(() {
           _zonas[i].proximoRiego = programacion.hora;
           _zonas[i].duracionProgramada = programacion.duracion;
+          _zonas[i].tipoRiego = programacion.tipoRiego;
           // Si hay programación guardada y la zona está activa, cambiar estado a programado
           if (_zonas[i].activa && _zonas[i].estado == EstadoRiego.inactivo) {
             _zonas[i].estado = EstadoRiego.programado;
@@ -450,10 +456,10 @@ class _RiegoPageState extends State<RiegoPage> {
               ),
               Expanded(
                 child: _buildInfoItem(
-                  icon: Symbols.access_time,
-                  label: 'Próximo',
-                  value: zona.proximoRiego,
-                  color: AppColors.textSecondary,
+                  icon: Symbols.water_drop,
+                  label: 'Tipo',
+                  value: _getTextoTipoRiego(zona.tipoRiego),
+                  color: _getColorTipoRiego(zona.tipoRiego),
                 ),
               ),
             ],
@@ -500,7 +506,55 @@ class _RiegoPageState extends State<RiegoPage> {
             ],
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
+
+          // Selector de tipo de riego
+          Row(
+            children: [
+              Text(
+                'Tipo: ',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              Expanded(
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _buildBotonTipoRiegoCard(
+                        index,
+                        TipoRiego.suave,
+                        'Suave',
+                        const Color(0xFF7EE787),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: _buildBotonTipoRiegoCard(
+                        index,
+                        TipoRiego.medio,
+                        'Medio',
+                        const Color(0xFF58A6FF),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: _buildBotonTipoRiegoCard(
+                        index,
+                        TipoRiego.fuerte,
+                        'Fuerte',
+                        const Color(0xFFFF6B6B),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
 
           // Botones de acción
           Row(
@@ -660,6 +714,78 @@ class _RiegoPageState extends State<RiegoPage> {
     }
   }
 
+  String _getTextoTipoRiego(TipoRiego tipo) {
+    switch (tipo) {
+      case TipoRiego.suave:
+        return 'Suave';
+      case TipoRiego.medio:
+        return 'Medio';
+      case TipoRiego.fuerte:
+        return 'Fuerte';
+    }
+  }
+
+  Color _getColorTipoRiego(TipoRiego tipo) {
+    switch (tipo) {
+      case TipoRiego.suave:
+        return const Color(0xFF7EE787); // Verde - suave
+      case TipoRiego.medio:
+        return const Color(0xFF58A6FF); // Azul - medio
+      case TipoRiego.fuerte:
+        return const Color(0xFFFF6B6B); // Rojo - fuerte
+    }
+  }
+
+  Widget _buildBotonTipoRiegoCard(int index, TipoRiego tipo, String label, Color color) {
+    final zona = _zonas[index];
+    final isSelected = zona.tipoRiego == tipo;
+    
+    return GestureDetector(
+      onTap: zona.activa
+          ? () {
+              setState(() {
+                _zonas[index].tipoRiego = tipo;
+              });
+            }
+          : null,
+      child: Opacity(
+        opacity: zona.activa ? 1.0 : 0.5,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 4),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? color.withValues(alpha: 0.15)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: isSelected ? color : AppColors.cardBorder,
+              width: isSelected ? 1.5 : 1,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Symbols.water_drop,
+                color: isSelected ? color : AppColors.textSecondary,
+                size: 14,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  color: isSelected ? color : AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _iniciarRiego(int index) {
     setState(() {
       // Activar la zona si está inactiva y cambiar a activo (programado)
@@ -675,7 +801,9 @@ class _RiegoPageState extends State<RiegoPage> {
       // Cambiar a estado regando
       _zonas[index].estado = EstadoRiego.regando;
     });
-    _mostrarSnackbar('Riego iniciado en ${_zonas[index].nombre}');
+    
+    final tipoTexto = _getTextoTipoRiego(_zonas[index].tipoRiego);
+    _mostrarSnackbar('Riego ${tipoTexto.toLowerCase()} iniciado en ${_zonas[index].nombre}');
     
     // Simular finalización del riego después de la duración programada
     Future.delayed(Duration(minutes: _zonas[index].duracionProgramada), () {
@@ -683,7 +811,20 @@ class _RiegoPageState extends State<RiegoPage> {
         setState(() {
           // Después del riego, volver a activo (programado)
           _zonas[index].estado = EstadoRiego.programado;
-          _zonas[index].humedad = (_zonas[index].humedad + 20).clamp(0, 100);
+          // Ajustar humedad según el tipo de riego
+          int incrementoHumedad = 20; // Por defecto
+          switch (_zonas[index].tipoRiego) {
+            case TipoRiego.suave:
+              incrementoHumedad = 15;
+              break;
+            case TipoRiego.medio:
+              incrementoHumedad = 20;
+              break;
+            case TipoRiego.fuerte:
+              incrementoHumedad = 30;
+              break;
+          }
+          _zonas[index].humedad = (_zonas[index].humedad + incrementoHumedad).clamp(0, 100);
         });
         _mostrarSnackbar('Riego completado en ${_zonas[index].nombre}');
       }
@@ -912,6 +1053,7 @@ class ZonaRiego {
   String proximoRiego;
   double consumoDiario; // en litros
   bool activa;
+  TipoRiego tipoRiego;
 
   ZonaRiego({
     required this.nombre,
@@ -923,6 +1065,7 @@ class ZonaRiego {
     required this.proximoRiego,
     required this.consumoDiario,
     required this.activa,
+    this.tipoRiego = TipoRiego.medio,
   });
 }
 

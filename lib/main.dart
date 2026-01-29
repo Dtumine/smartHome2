@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -21,6 +22,7 @@ import 'pages/alarmas_page.dart';
 import 'pages/ventilacion_page.dart';
 import 'pages/login_page.dart';
 import 'pages/perfil_page.dart';
+import 'pages/dispositivos_activos_page.dart';
 import 'providers/auth_provider.dart';
 import 'services/auth_service.dart';
 import 'theme/app_colors.dart';
@@ -63,7 +65,9 @@ class AuthWrapper extends StatelessWidget {
         if (!isLoggedIn) {
           // Redirigir a login después de que el frame se construya
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            context.go('/login');
+            if (context.mounted) {
+              context.go('/login');
+            }
           });
           return const SizedBox.shrink();
         }
@@ -289,6 +293,10 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/ventilacion',
       builder: (context, state) => const AuthWrapper(child: VentilacionPage()),
+    ),
+    GoRoute(
+      path: '/dispositivos-activos',
+      builder: (context, state) => const AuthWrapper(child: DispositivosActivosPage()),
     ),
   ],
 );

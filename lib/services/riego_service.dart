@@ -1,12 +1,19 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
+enum TipoRiego {
+  suave,
+  medio,
+  fuerte,
+}
+
 class ProgramacionRiego {
   final String zona;
   final String hora; // Formato "HH:mm"
   final int duracion; // minutos
   final Map<String, bool> diasSemana;
   final bool repetirSemanalmente;
+  final TipoRiego tipoRiego;
 
   ProgramacionRiego({
     required this.zona,
@@ -14,6 +21,7 @@ class ProgramacionRiego {
     required this.duracion,
     required this.diasSemana,
     required this.repetirSemanalmente,
+    this.tipoRiego = TipoRiego.medio,
   });
 
   Map<String, dynamic> toJson() {
@@ -23,16 +31,30 @@ class ProgramacionRiego {
       'duracion': duracion,
       'diasSemana': diasSemana,
       'repetirSemanalmente': repetirSemanalmente,
+      'tipoRiego': tipoRiego.name,
     };
   }
 
   factory ProgramacionRiego.fromJson(Map<String, dynamic> json) {
+    TipoRiego tipo = TipoRiego.medio;
+    if (json['tipoRiego'] != null) {
+      try {
+        tipo = TipoRiego.values.firstWhere(
+          (e) => e.name == json['tipoRiego'],
+          orElse: () => TipoRiego.medio,
+        );
+      } catch (e) {
+        tipo = TipoRiego.medio;
+      }
+    }
+    
     return ProgramacionRiego(
       zona: json['zona'] as String,
       hora: json['hora'] as String,
       duracion: json['duracion'] as int,
       diasSemana: Map<String, bool>.from(json['diasSemana'] as Map),
       repetirSemanalmente: json['repetirSemanalmente'] as bool,
+      tipoRiego: tipo,
     );
   }
 }

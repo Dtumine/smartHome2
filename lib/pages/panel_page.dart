@@ -724,24 +724,27 @@ class _PanelPageState extends State<PanelPage> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (sheetContext) => Container(
-        padding: const EdgeInsets.all(20),
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.7,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Agregar Módulos al Panel',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+      builder: (sheetContext) {
+        // Obtener altura de forma segura
+        final screenHeight = MediaQuery.maybeOf(sheetContext)?.size.height ?? 600;
+        return Container(
+          padding: const EdgeInsets.all(20),
+          constraints: BoxConstraints(
+            maxHeight: screenHeight * 0.7,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Agregar Módulos al Panel',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
-            Flexible(
+              const SizedBox(height: 20),
+              Flexible(
               child: ListView.builder(
                 shrinkWrap: true,
                 itemCount: iconosDisponibles.length,
@@ -832,11 +835,12 @@ class _PanelPageState extends State<PanelPage> {
                   );
                 },
               ),
-            ),
-            const SizedBox(height: 10),
-          ],
-        ),
-      ),
+              ),
+              const SizedBox(height: 10),
+            ],
+          ),
+        );
+      },
     );
   }
 

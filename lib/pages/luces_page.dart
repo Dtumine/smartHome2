@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:heroicons/heroicons.dart';
 import 'dart:math' as math;
 import '../theme/app_colors.dart';
+import '../services/dispositivos_service.dart';
 
 class LucesPage extends StatefulWidget {
   const LucesPage({super.key});
@@ -12,6 +13,8 @@ class LucesPage extends StatefulWidget {
 }
 
 class _LucesPageState extends State<LucesPage> {
+  final _dispositivosService = DispositivoService();
+  
   // Habitación seleccionada
   int _habitacionSeleccionada = 0;
 
@@ -125,6 +128,11 @@ class _LucesPageState extends State<LucesPage> {
       _habitaciones[_habitacionSeleccionada].color = nuevoColor;
       if (!_habitaciones[_habitacionSeleccionada].encendida) {
         _habitaciones[_habitacionSeleccionada].encendida = true;
+        // Sincronizar con el servicio
+        final nombreLuz = _getNombreLuzEnServicio(_habitaciones[_habitacionSeleccionada].nombre);
+        if (nombreLuz != null) {
+          _dispositivosService.cambiarEstado(nombreLuz, true);
+        }
       }
     });
   }
@@ -134,6 +142,11 @@ class _LucesPageState extends State<LucesPage> {
       _habitaciones[_habitacionSeleccionada].brillo = valor.round();
       if (!_habitaciones[_habitacionSeleccionada].encendida && valor > 0) {
         _habitaciones[_habitacionSeleccionada].encendida = true;
+        // Sincronizar con el servicio
+        final nombreLuz = _getNombreLuzEnServicio(_habitaciones[_habitacionSeleccionada].nombre);
+        if (nombreLuz != null) {
+          _dispositivosService.cambiarEstado(nombreLuz, true);
+        }
       }
     });
   }
@@ -142,7 +155,31 @@ class _LucesPageState extends State<LucesPage> {
     setState(() {
       _habitaciones[_habitacionSeleccionada].encendida = 
           !_habitaciones[_habitacionSeleccionada].encendida;
+      // Sincronizar con el servicio
+      final nombreLuz = _getNombreLuzEnServicio(_habitaciones[_habitacionSeleccionada].nombre);
+      if (nombreLuz != null) {
+        _dispositivosService.cambiarEstado(nombreLuz, _habitaciones[_habitacionSeleccionada].encendida);
+      }
     });
+  }
+
+  String? _getNombreLuzEnServicio(String nombreHabitacion) {
+    // Mapear nombres de habitaciones a nombres en el servicio
+    final mapa = {
+      'Sala': 'Luz Sala',
+      'Cocina': 'Luz Cocina',
+      'Dormitorio 1': 'Luz Dormitorio 1 (Luces)',
+      'Baño 1': 'Luz Baño 1',
+      'Garage': 'Luz Garage (Luces)',
+      'Jardín 1': 'Luz Jardín 1',
+      'Living': 'Luz Living',
+      'Dormitorio 2': 'Luz Dormitorio 2 (Luces)',
+      'Dormitorio 3': 'Luz Dormitorio 3',
+      'Jardín 2': 'Luz Jardín 2',
+      'Piscina': 'Luz Piscina',
+      'Pérgola': 'Luz Pérgola',
+    };
+    return mapa[nombreHabitacion];
   }
 
   @override

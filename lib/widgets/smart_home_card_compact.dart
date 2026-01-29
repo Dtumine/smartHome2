@@ -40,17 +40,25 @@ class _SmartHomeCardCompactState extends State<SmartHomeCardCompact>
   Widget build(BuildContext context) {
     return GestureDetector(
       onTapDown: (_) {
-        setState(() => _isPressed = true);
-        _controller.forward();
+        if (mounted) {
+          setState(() => _isPressed = true);
+          _controller.forward();
+        }
       },
       onTapUp: (_) {
-        setState(() => _isPressed = false);
-        _controller.reverse();
-        context.push(widget.option.route);
+        if (mounted) {
+          setState(() => _isPressed = false);
+          _controller.reverse();
+          if (context.mounted) {
+            context.push(widget.option.route);
+          }
+        }
       },
       onTapCancel: () {
-        setState(() => _isPressed = false);
-        _controller.reverse();
+        if (mounted) {
+          setState(() => _isPressed = false);
+          _controller.reverse();
+        }
       },
       child: AnimatedBuilder(
         animation: _scaleAnimation,

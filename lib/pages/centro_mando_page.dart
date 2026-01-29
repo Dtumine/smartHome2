@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:heroicons/heroicons.dart';
 import 'package:fl_chart/fl_chart.dart';
+import '../services/dispositivos_service.dart';
 
 class CentroMandoPage extends StatefulWidget {
   const CentroMandoPage({super.key});
@@ -11,6 +12,24 @@ class CentroMandoPage extends StatefulWidget {
 }
 
 class _CentroMandoPageState extends State<CentroMandoPage> {
+  final _dispositivosService = DispositivoService();
+
+  int get _dispositivosActivos => _dispositivosService.dispositivosActivos;
+  int get _totalDispositivos => _dispositivosService.totalDispositivos;
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Actualizar cuando se vuelve a esta página
+    if (mounted) {
+      setState(() {});
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -121,12 +140,21 @@ class _CentroMandoPageState extends State<CentroMandoPage> {
                 // Card 2: Dispositivos Activos
                 SizedBox(
                   height: 125,
-                  child: _buildKpiCardHorizontal(
-                    icon: HeroIcons.cpuChip,
-                    iconColor: const Color(0xFF7EE787),
-                    title: 'Dispositivos Activos',
-                    value: '24/27',
-                    subtitle: 'Conectados ahora',
+                  child: GestureDetector(
+                    onTap: () async {
+                      await context.push('/dispositivos-activos');
+                      // Actualizar cuando se regresa de la página
+                      if (mounted) {
+                        setState(() {});
+                      }
+                    },
+                    child: _buildKpiCardHorizontal(
+                      icon: HeroIcons.cpuChip,
+                      iconColor: const Color(0xFF7EE787),
+                      title: 'Dispositivos Activos',
+                      value: '$_dispositivosActivos/$_totalDispositivos',
+                      subtitle: 'Conectados ahora',
+                    ),
                   ),
                 ),
                 

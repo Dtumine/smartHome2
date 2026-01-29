@@ -34,6 +34,7 @@ class _ProgramarRiegoPageState extends State<ProgramarRiegoPage> {
   String _zonaSeleccionada = 'Jardín Frontal';
   TimeOfDay _horaSeleccionada = const TimeOfDay(hour: 8, minute: 0);
   int _duracion = 30; // minutos
+  TipoRiego _tipoRiego = TipoRiego.medio;
   final Map<String, bool> _diasSemana = {
     'Lunes': false,
     'Martes': false,
@@ -74,39 +75,40 @@ class _ProgramarRiegoPageState extends State<ProgramarRiegoPage> {
       final riegoService = RiegoService();
       final programacion = await riegoService.obtenerProgramacion(_zonaSeleccionada);
       
-      if (mounted) {
-        setState(() {
-          if (programacion != null) {
-            // Cargar valores guardados
-            try {
-              final partesHora = programacion.hora.split(':');
-              _horaSeleccionada = TimeOfDay(
-                hour: int.parse(partesHora[0]),
-                minute: int.parse(partesHora[1]),
-              );
-              
-              _duracion = programacion.duracion;
-              
-              // Cargar días de la semana guardados
-              _diasSemana.clear();
-              _diasSemana.addAll(programacion.diasSemana);
-              
-              _repetirSemanalmente = programacion.repetirSemanalmente;
-              
-              print('✓ Programación cargada para: $_zonaSeleccionada');
-              print('  Hora: ${programacion.hora}, Duración: ${programacion.duracion}');
-            } catch (e) {
-              print('✗ Error al parsear programación guardada: $e');
-              // Si hay error al parsear, usar valores por defecto
-              _diasSemana.updateAll((key, value) => true);
-            }
-          } else {
-            // Solo establecer valores por defecto si no hay programación guardada
+      if (!mounted) return;
+      
+      setState(() {
+        if (programacion != null) {
+          // Cargar valores guardados
+          try {
+            final partesHora = programacion.hora.split(':');
+            _horaSeleccionada = TimeOfDay(
+              hour: int.parse(partesHora[0]),
+              minute: int.parse(partesHora[1]),
+            );
+            
+            _duracion = programacion.duracion;
+            
+            // Cargar días de la semana guardados
+            _diasSemana.clear();
+            _diasSemana.addAll(programacion.diasSemana);
+            
+            _repetirSemanalmente = programacion.repetirSemanalmente;
+            _tipoRiego = programacion.tipoRiego;
+            
+            print('✓ Programación cargada para: $_zonaSeleccionada');
+            print('  Hora: ${programacion.hora}, Duración: ${programacion.duracion}');
+          } catch (e) {
+            print('✗ Error al parsear programación guardada: $e');
+            // Si hay error al parsear, usar valores por defecto
             _diasSemana.updateAll((key, value) => true);
-            print('ℹ No hay programación guardada para: $_zonaSeleccionada');
           }
-        });
-      }
+        } else {
+          // Solo establecer valores por defecto si no hay programación guardada
+          _diasSemana.updateAll((key, value) => true);
+          print('ℹ No hay programación guardada para: $_zonaSeleccionada');
+        }
+      });
     } catch (e) {
       print('✗ Error al cargar programación: $e');
       if (mounted) {
@@ -212,6 +214,13 @@ class _ProgramarRiegoPageState extends State<ProgramarRiegoPage> {
                       _buildTituloSeccion('Duración'),
                       const SizedBox(height: 12),
                       _buildSelectorDuracion(),
+
+                      const SizedBox(height: 20),
+
+                      // Tipo de Riego
+                      _buildTituloSeccion('Tipo de Riego'),
+                      const SizedBox(height: 12),
+                      _buildSelectorTipoRiego(),
 
                       const SizedBox(height: 20),
 
@@ -550,6 +559,72 @@ class _ProgramarRiegoPageState extends State<ProgramarRiegoPage> {
     );
   }
 
+  Widget _buildSelectorTipoRiego() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.cardBorder,
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _buildBotonTipoRiego(TipoRiego.suave, 'Suave', const Color(0xFF7EE787)),
+          _buildBotonTipoRiego(TipoRiego.medio, 'Medio', const Color(0xFF58A6FF)),
+          _buildBotonTipoRiego(TipoRiego.fuerte, 'Fuerte', const Color(0xFFFF6B6B)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBotonTipoRiego(TipoRiego tipo, String label, Color color) {
+    final isSelected = _tipoRiego == tipo;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            _tipoRiego = tipo;
+          });
+        },
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? color.withValues(alpha: 0.15)
+                : AppColors.cardBackgroundAlt,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected ? color : AppColors.cardBorder,
+              width: isSelected ? 2 : 1,
+            ),
+          ),
+          child: Column(
+            children: [
+              Icon(
+                Symbols.water_drop,
+                color: isSelected ? color : AppColors.textSecondary,
+                size: 24,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  color: isSelected ? color : AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildSelectorDias() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -734,6 +809,7 @@ class _ProgramarRiegoPageState extends State<ProgramarRiegoPage> {
       duracion: _duracion,
       diasSemana: Map<String, bool>.from(_diasSemana),
       repetirSemanalmente: _repetirSemanalmente,
+      tipoRiego: _tipoRiego,
     );
 
     final guardado = await riegoService.guardarProgramacion(programacion);
