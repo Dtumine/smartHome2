@@ -54,10 +54,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Email o contraseña incorrectos'),
-          backgroundColor: AppColors.errorDark,
+          backgroundColor: const Color(0xFF2A2530),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
+            side: const BorderSide(
+              color: Color(0xFF2D2835),
+              width: 1,
+            ),
           ),
         ),
       );
@@ -66,11 +70,26 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Colores basados en el logo: tonos oscuros con tinte púrpura/azul
+    const Color logoPrimary = Color(0xFF19161D); // Color principal del logo
+    const Color logoSecondary = Color(0xFF1A171D); // Color secundario
+    const Color logoTertiary = Color(0xFF18151C); // Color terciario
+    const Color logoAccent = Color(0xFF2A2530); // Color de acento más claro
+    const Color logoBorder = Color(0xFF2D2835); // Color para bordes
+    
     return Scaffold(
-      backgroundColor: AppColors.backgroundPrimary,
+      backgroundColor: logoPrimary,
       body: Container(
         decoration: const BoxDecoration(
-          gradient: AppColors.celestialBlueGradient,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF19161D), // Color principal del logo
+              Color(0xFF1A171D), // Color secundario
+              Color(0xFF18151C), // Color terciario
+            ],
+          ),
         ),
         child: SafeArea(
           child: Center(
@@ -83,34 +102,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // Logo y título
-                    Container(
-                      width: 100,
-                      height: 100,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            Color(0xFF58A6FF),
-                            Color(0xFF0077B6),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF58A6FF).withValues(alpha: 0.3),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.home,
-                        size: 50,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 32),
                     const Text(
                       'Smart Home',
                       style: TextStyle(
@@ -125,7 +116,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       'Inicia sesión para continuar',
                       style: TextStyle(
                         fontSize: 16,
-                        color: AppColors.textSecondary,
+                        color: Colors.white.withValues(alpha: 0.7),
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -134,10 +125,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     // Campo de email
                     Container(
                       decoration: BoxDecoration(
-                        color: AppColors.cardBackground,
+                        color: logoAccent.withValues(alpha: 0.6),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: AppColors.cardBorder,
+                          color: logoBorder,
+                          width: 1.5,
                         ),
                       ),
                       child: TextFormField(
@@ -146,10 +138,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
                           labelText: 'Email',
-                          labelStyle: TextStyle(color: AppColors.textSecondary),
-                          prefixIcon: const Icon(
+                          labelStyle: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.6),
+                          ),
+                          prefixIcon: Icon(
                             Icons.email_outlined,
-                            color: Color(0xFF58A6FF),
+                            color: Colors.white.withValues(alpha: 0.8),
                           ),
                           border: InputBorder.none,
                           contentPadding: const EdgeInsets.symmetric(
@@ -173,10 +167,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     // Campo de contraseña
                     Container(
                       decoration: BoxDecoration(
-                        color: AppColors.cardBackground,
+                        color: logoAccent.withValues(alpha: 0.6),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: AppColors.cardBorder,
+                          color: logoBorder,
+                          width: 1.5,
                         ),
                       ),
                       child: TextFormField(
@@ -185,17 +180,19 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
                           labelText: 'Contraseña',
-                          labelStyle: TextStyle(color: AppColors.textSecondary),
-                          prefixIcon: const Icon(
+                          labelStyle: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.6),
+                          ),
+                          prefixIcon: Icon(
                             Icons.lock_outline,
-                            color: Color(0xFF58A6FF),
+                            color: Colors.white.withValues(alpha: 0.8),
                           ),
                           suffixIcon: IconButton(
                             icon: Icon(
                               _obscurePassword
                                   ? Icons.visibility_outlined
                                   : Icons.visibility_off_outlined,
-                              color: AppColors.textSecondary,
+                              color: Colors.white.withValues(alpha: 0.6),
                             ),
                             onPressed: () {
                               setState(() {
@@ -228,10 +225,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _handleLogin,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF58A6FF),
+                          backgroundColor: logoAccent,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
+                            side: BorderSide(
+                              color: logoBorder,
+                              width: 1.5,
+                            ),
                           ),
                           elevation: 0,
                         ),
@@ -262,7 +263,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       'Para esta demo, puedes usar cualquier email y contraseña válidos',
                       style: TextStyle(
                         fontSize: 12,
-                        color: AppColors.textSecondary,
+                        color: Colors.white.withValues(alpha: 0.5),
                       ),
                       textAlign: TextAlign.center,
                     ),
